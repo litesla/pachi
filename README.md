@@ -2,6 +2,9 @@
 
 Pachi
 =====
+//缺少配置输入命令才能运行
+//sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
+
 
 Pachi can refer to: a simple modular framework for programs playing
 the game of Go/Weiqi/Baduk, and a reasonably strong engine built

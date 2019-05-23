@@ -18,6 +18,7 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(b, color, r);
 	find_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
+    //打印棋盘
 	print_dcnn_best_moves(b, best_moves, best_r, DCNN_BEST_N);
 	
 	/* Make sure move is valid ... */

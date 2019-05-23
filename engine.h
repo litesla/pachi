@@ -28,11 +28,13 @@ typedef void (*engine_livegfx_hook_t)(struct engine *e);
 
 /* This is engine data structure. A new engine instance is spawned
  * for each new game during the program lifetime. */
+/*这是引擎数据结构。生成新的引擎实例在程序生命周期内的每一个新游戏。*/
 struct engine {
 	char *name;
 	char *comment;
 
 	/* If set, do not reset the engine state on clear_board. */
+     /*如果已设置，请勿在清除板上重置发动机状态。*/
 	bool keep_on_clear;
 
 	engine_notify_t          notify;
@@ -45,33 +47,45 @@ struct engine {
 	/* Generate a move. If pass_all_alive is true, <pass> shall be generated only
 	 * if all stones on the board can be considered alive, without regard to "dead"
 	 * considered stones. */
+    /*生成移动。如果pass-all-live为真，则仅应生成<pass>
+     * 如果董事会上所有的石头都被认为是活的，而不考虑“死的”
+     * 被认为是石头。*/
 	engine_genmove_t         genmove;
 
 	/* Used by distributed engine */
+    /*分布式引擎使用*/
 	engine_genmoves_t        genmoves;
 
 	/* List best moves for current position. */
+    /*分布式引擎列表使用当前位置的最佳移动。*/
 	engine_best_moves_t      best_moves;
 
 	/* Evaluate feasibility of player @color playing at all free moves. Will
 	 * simulate each move from b->f[i] for time @ti, then set
 	 * 1-max(opponent_win_likelihood) in vals[i]. */
+     /*评估玩家@color在所有自由移动中玩游戏的可行性。威尔
+      * 从b->f[i]模拟每次移动的时间@ti，然后在vals[i]中设置1-max（对手获胜概率）。*/
 	engine_evaluate_t        evaluate;
 
 	/* One dead group per queued move (coord_t is (ab)used as group_t). */
+    /*每个排队移动一个死组（coord_t is（ab）用作组t）。*/
 	engine_dead_group_list_t dead_group_list;
 
 	/* Pause any background thinking being done, but do not tear down
 	 * any data structures yet. */
+    /*暂停正在进行的任何后台思考，但不要破坏任何数据结构。*/
 	engine_stop_t            stop;
 
 	/* e->data and e will be free()d by caller afterwards. */
+    /*e->data和e随后将被调用方释放（）d。*/
 	engine_done_t            done;
 
 	/* Return current ownermap, if engine supports it. */
+    /*如果引擎支持，返回当前所有者地图。*/
 	engine_ownermap_t        ownermap;
 	
 	/* GoGui hook */
+    /*GoGui钩*/
 	engine_livegfx_hook_t   livegfx_hook;
 	
 	void *data;

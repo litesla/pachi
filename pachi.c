@@ -42,7 +42,7 @@ enum engine_id {
 	E_PATTERNSCAN,
 	E_PATTERNPLAY,
 	E_MONTECARLO, //蒙特卡洛树搜索
-	E_UCT,//bcb问题，多臂老虎机问题，得知某个把手，被游戏的次数越少，玩他的概率越高，她赢得概率越高，他被玩的概率越高
+	E_UCT,//ucb问题，多臂老虎机问题，得知某个把手，被游戏的次数越少，玩他的概率越高，她赢得概率越高，他被玩的概率越高
 	E_DISTRIBUTED, //分布式计算
 	E_JOSEKI,//不经常用
 #ifdef DCNN
@@ -50,7 +50,8 @@ enum engine_id {
 #endif
 	E_MAX,//表示引擎的个数，编号从0开始，ifdef 作用的是还有代码裁剪
 };
-//函数指针数组，下面的都是函数
+//函数指针数组，下面的都是函数 作用是初始化不同的引擎
+//typedef struct engine *(*engine_init_t)(char *arg, struct board *b);
 static engine_init_t engine_init[E_MAX] = {
 	engine_random_init,
 	engine_replay_init,
@@ -65,13 +66,15 @@ static engine_init_t engine_init[E_MAX] = {
 #endif
 };
 
+//枚举类型， 引擎参数，棋盘
 static struct engine *
 init_engine(enum engine_id engine, char *e_arg, struct board *b)
 {
-	char *arg = e_arg? strdup(e_arg) : e_arg;
-	assert(engine < E_MAX);
-	struct engine *e = engine_init[engine](arg, b);
-	if (arg) free(arg);
+	char *arg = e_arg? strdup(e_arg) : e_arg; //判断是否为空
+	assert(engine < E_MAX);//判断是否合法
+	struct engine *e = engine_init[engine](arg, b);//调用相应的初始化函数，去初始化引擎
+	if (arg) free(arg);//释放空间
+    //返回我们初始化的引擎
 	return e;
 }
 
@@ -165,8 +168,10 @@ static struct option longopts[] = {
 
 int main(int argc, char *argv[])
 {
-	enum engine_id engine = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };	
+	enum engine_id engine = E_UCT;//默认引擎
+    //默认搜索时间，无限制 
+	struct time_info ti_default = { .period = TT_NULL };
+    //提取参数值的指针
 	char *testfile = NULL;
 	char *gtp_port = NULL;
 	char *log_port = NULL;
@@ -187,6 +192,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int option_index;
 	/* Leading ':' -> we handle error messages. */
+    //getopt_long处理参数的问题
 	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
@@ -197,7 +203,7 @@ int main(int argc, char *argv[])
 				printf("CFLAGS:\n%s\n\n", PACHI_CFLAGS);
 				printf("Command:\n%s\n", PACHI_CC1);
 				exit(0);
-			case 'e':
+			case 'e'://设置引擎
 				if      (!strcasecmp(optarg, "random"))		engine = E_RANDOM;
 				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
 				else if (!strcasecmp(optarg, "montecarlo"))	engine = E_MONTECARLO;
@@ -241,7 +247,7 @@ int main(int argc, char *argv[])
 			case 'r':
 				ruleset = strdup(optarg);
 				break;
-			case 's':
+			case 's'://确定随机种子的起始位置
 				seed = atoi(optarg);
 				break;
 			case 't':
@@ -253,9 +259,10 @@ int main(int argc, char *argv[])
 				 * by number of simulations in timed games. */
 				/* Please see timeinfo.h:time_parse()
 				 * description for syntax details. */
+                 /*要遵循的时间设置；如果指定，则忽略GTP时间信息。有用的，例如，当你想让你的机器人在给对手合理的时间玩游戏的同时使其变得更弱时，或者在定时游戏中通过模拟次数强制玩游戏。有关语法详细信息，请参阅timeinfo.h:time_parse（）description。*/
 				if (!time_parse(&ti_default, optarg))
 					die("%s: Invalid -t argument %s\n", argv[0], optarg);
-				ti_default.ignore_gtp = true;
+				ti_default.ignore_gtp = true;//设置
 				assert(ti_default.period != TT_NULL);
 				break;
 			case OPT_FUSEKI_TIME:
@@ -281,9 +288,9 @@ int main(int argc, char *argv[])
 				    "Try 'pachi --help' for more information.\n", argv[optind-1]);
 		}
 	}
-
+    //设置随机种子，是自己写的随机函数，要比系统的快
 	fast_srandom(seed);
-	
+	//判断参数是否被设置了
 	if (!verbose_caffe)      quiet_caffe(argc, argv);
 	if (log_port)		 open_log_port(log_port);	
 	if (testfile)		 return unit_test(testfile);
@@ -291,10 +298,10 @@ int main(int argc, char *argv[])
 	if (getenv("DATA_DIR"))
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
-
+    //棋盘初始化
 	struct board *b = board_init(fbookfile);
 	if (ruleset && !board_set_rules(b, ruleset))  die("Unknown ruleset: %s\n", ruleset);
-
+    //可以搜索的时间
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
 	ti[S_WHITE] = ti_default;
@@ -303,15 +310,17 @@ int main(int argc, char *argv[])
 
 	char *e_arg = NULL;
 	if (optind < argc)	e_arg = argv[optind];
+    //参数读取完成，就开始初始化引擎了
 	struct engine *e = init_engine(engine, e_arg, b);
 
 	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 
+    //死循环，去不断地读取命令和执行命令
 	for (;;) {
 		char buf[4096];
 		while (fgets(buf, 4096, stdin)) {
 			if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
-
+            //读取到命令之后，开始处理命令，看传入的参数有棋盘，引擎，命令
 			enum parse_code c = gtp_parse(b, e, ti, buf);
 			if (c == P_ENGINE_RESET) {
 				ti[S_BLACK] = ti_default;

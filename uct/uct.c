@@ -748,12 +748,13 @@ default_max_tree_size()
 	return (size_t)300 * mult * 1048576;
 }
 
+//设置uct引擎状态
 struct uct *
 uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc2(1, sizeof(struct uct));
 	bool pat_setup = false;
-
+    //引擎状态参数设置
 	u->debug_level = debug_level;
 	u->reportfreq = 1000;
 	u->gamelen = MC_GAMELEN;
@@ -775,14 +776,14 @@ uct_state_init(char *arg, struct board *b)
 
 	u->pondering_opt = false;
 
-	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
-	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
+	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)361*20%时的最长时间=72次移动（我们的第36次移动，仍有99次移动
+	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then（100-40-25）*361/100/2=63个动作由我们继续玩
 	u->bestr_ratio = 0.02;
-	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
-	// TODO: Further tuning and experiments with better time allocation schemes.
+	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.2.5显然太多了，但似乎可以很好地补偿过于严厉的时间分配。
+	// TODO: Further tuning and experiments with better time allocation schemes.TODO：进一步的调整和更好的时间分配方案的实验。
 	u->best2_ratio = 2.5;
-	// Higher values of max_maintime_ratio sometimes cause severe time trouble in tournaments
-	// It might be necessary to reduce it to 1.5 on large board, but more tuning is needed.
+	// Higher values of max_maintime_ratio sometimes cause severe time trouble in tournaments 最大保持时间比率的较高值有时会在锦标赛中造成严重的时间问题。
+	// It might be necessary to reduce it to 1.5 on large board, but more tuning is needed.可能有必要在大型板上将其降低到1.5，但需要进行更多的调整。
 	u->max_maintime_ratio = 2.0;
 
 	u->val_scale = 0; u->val_points = 40;
@@ -826,23 +827,24 @@ uct_state_init(char *arg, struct board *b)
 				/* The format of output for detailed progress
 				 * information (such as current best move and
 				 * its value, etc.). */
+                /*详细进度信息的输出格式（如当前最佳移动及其值等）。*/
 				if (!strcasecmp(optval, "text")) {
-					/* Plaintext traditional output. */
+					/* Plaintext traditional output. 纯文本传统输出。*/
 					u->reporting = UR_TEXT;
 				} else if (!strcasecmp(optval, "json")) {
-					/* JSON output. Implies debug=0. */
+					/* JSON output. Implies debug=0. JSON输出。表示debug=0。*/
 					u->reporting = UR_JSON;
 					u->debug_level = 0;
 				} else if (!strcasecmp(optval, "jsonbig")) {
 					/* JSON output, but much more detailed.
-					 * Implies debug=0. */
+					 * Implies debug=0. JSON输出，但更详细。表示debug=0。*/
 					u->reporting = UR_JSON_BIG;
 					u->debug_level = 0;
 				} else
 					die("UCT: Invalid reporting format %s\n", optval);
 			} else if (!strcasecmp(optname, "reportfreq") && optval) {
 				/* The progress information line will be shown
-				 * every <reportfreq> simulations. */
+				 * every <reportfreq> simulations. 进度信息行将每<reportfreq>次模拟显示一次。*/
 				u->reportfreq = atoi(optval);
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				/* When dumping the UCT tree on output, include
@@ -851,41 +853,51 @@ uct_state_init(char *arg, struct board *b)
 				 * tree root.) */
 				/* Use 0 to list all nodes with at least one
 				 * simulation, and -1 to list _all_ nodes. */
+                /*在输出上转储UCT树时，包括至少有这么多播放的节点。（三根的总决赛分数。）
+使用0列出至少有一个模拟的所有节点，-1列出所有节点。*/
 				u->dumpthres = atof(optval);
 			} else if (!strcasecmp(optname, "resign_threshold") && optval) {
 				/* Resign when this ratio of games is lost
 				 * after GJ_MINGAMES sample is taken. */
+                /*当这个比例的游戏在GJ Mingames抽样后丢失时辞职。*/
 				u->resign_threshold = atof(optval);
 			} else if (!strcasecmp(optname, "sure_win_threshold") && optval) {
 				/* Stop reading when this ratio of games is won
 				 * after PLAYOUT_EARLY_BREAK_MIN sample is
 				 * taken. (Prevents stupid time losses,
 				 * friendly to human opponents.) */
+                /*当这一比例的游戏是在游戏结束后赢得的时候，停止阅读。（防止愚蠢的时间损失，对人类对手友好。）*/
 				u->sure_win_threshold = atof(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				/* Set RNG seed at the tree setup. */
+                /*在树设置中设置RNG SEED。*/
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_tbook")) {
 				/* Disable UCT opening tbook. */
+                /*禁用UCT打开tBook。*/
 				u->no_tbook = true;
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider passing only after all
 				 * dead groups were removed from the board;
 				 * this is like all genmoves are in fact
 				 * kgs-genmove_cleanup. */
+                /*是否只考虑在所有死亡群体从董事会中移除后才通过；这就像所有的genmoves实际上都是KGS-genmove_清理。*/
 				u->pass_all_alive = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "allow_losing_pass")) {
 				/* Whether to consider passing in a clear
 				 * but losing situation, to be scored as a loss
 				 * for us. */
+                /*是否考虑在明确但失败的情况下传球，对我们来说是一个损失。*/
 				u->allow_losing_pass = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "territory_scoring")) {
 				/* Use territory scoring (default is area scoring).
 				 * An explicit kgs-rules command overrides this. */
+                /*使用区域评分（默认为区域评分）。显式KGS规则命令重写此*/
 				u->territory_scoring = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "stones_only")) {
 				/* Do not count eyes. Nice to teach go to kids.
 				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
+                /*不要数数眼睛。很高兴教给孩子们。http://strasbourg.jeudego.org/regle ou strasbourgeoise.htm*/
 				b->rules = RULES_STONES_ONLY;
 				u->pass_all_alive = true;
 			} else if (!strcasecmp(optname, "debug_after")) {
@@ -895,6 +907,7 @@ uct_state_init(char *arg, struct board *b)
 				 * another 1000 simulations are run single-threaded
 				 * with debug level 9, allowing inspection of Pachi's
 				 * behavior after it has thought a lot. */
+                /*debug after=9:1000将使pachi在正常情况下思考，但在选择移动的时候，树被转储，另外1000个模拟使用debug level 9单线程运行，允许在经过深思熟虑后检查pachi的行为。*/
 				if (optval) {
 					u->debug_after.level = atoi(optval);
 					char *playouts = strchr(optval, ':');
@@ -910,6 +923,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Additional banner string. This must come as the
 				 * last engine parameter. You can use '+' instead
 				 * of ' ' if you are wrestling with kgsGtp. */
+                /*字符串附加的旗帜。this as the last必备的发动机参数。你可以使用instead of +如果你是摔跤与kgsgtp*/
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
 				for (char *b = u->banner; *b; b++) {
@@ -919,12 +933,14 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Load an external plugin; filename goes before the colon,
 				 * extra arguments after the colon. */
+                /*加载外部插件；文件名位于冒号之前，Xtra参数位于冒号之后。*/
 				char *pluginarg = strchr(optval, ':');
 				if (pluginarg)
 					*pluginarg++ = 0;
 				plugin_load(u->plugins, optval, pluginarg);
 
 			/** UCT behavior and policies */
+            /*UCT行为和政策*/
 
 			} else if ((!strcasecmp(optname, "policy")
 				/* Node selection policy. ucb1amaf is the
@@ -932,6 +948,7 @@ uct_state_init(char *arg, struct board *b)
 				 * ucb1 is the simple exploration/exploitation
 				 * policy. Policies can take further extra
 				 * options. */
+                /*节点选择策略。UCB1AMAF是实现RAVE的默认策略，而UCB1是简单的勘探/开发策略。政策可以采取进一步的额外选择。*/
 			            || !strcasecmp(optname, "random_policy")) && optval) {
 				/* A policy to be used randomly with small
 				 * chance instead of the default policy. */
@@ -951,6 +968,7 @@ uct_state_init(char *arg, struct board *b)
 				 * amount of domain-specific knowledge and
 				 * heuristics. light is a simple uniformly
 				 * random move selection policy. */
+                /*随机模拟（播放）策略.moggy是默认策略领域特定知识和启发式方法的数量。光是一个简单的统一和移动选择政策。*/
 				char *playoutarg = strchr(optval, ':');
 				if (playoutarg)
 					*playoutarg++ = 0;
@@ -967,20 +985,24 @@ uct_state_init(char *arg, struct board *b)
 				 * opinion, but also with regard to other
 				 * things). See uct/prior.c for details.
 				 * Use prior=eqex=0 to disable priors. */
+                /*节点优先策略。当扩展一个节点时，它将以启发式方式（最重要的是，基于播放策略的意见，但也涉及到其他事情）种子节点值。详见UCT/Prior.C。使用prior=eqex=0禁用prior。*/
 				u->prior = uct_prior_init(optval, b, u);
 			} else if (!strcasecmp(optname, "mercy") && optval) {
 				/* Minimal difference of black/white captures
 				 * to stop playout - "Mercy Rule". Speeds up
 				 * hopeless playouts at the expense of some
 				 * accuracy. */
+                /*黑白截图的最小差异，以阻止播放-“仁慈规则”。以一定的准确性加速无望的决赛。*/
 				u->mercymin = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				/* Maximum length of single simulation
 				 * in moves. */
+                /*移动中单个模拟的最大长度。*/
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
 				/* Expand UCT nodes after it has been
 				 * visited this many times. */
+                /*在多次访问之后展开UCT节点。*/
 				u->expand_p = atoi(optval);
 			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
 				/* If specified (N), with probability 1/N, random_policy policy
@@ -988,19 +1010,27 @@ uct_state_init(char *arg, struct board *b)
 				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
 				 * choices sometimes, you can fall back to e.g.
 				 * random_policy=UCB1. */
+                /*如果指定了（n），概率为1/n，则使用随机策略下降而不是主策略下降；如果指定的策略（例如UCB1AMAF）有时会做出过度偏向的选择，则很有用，您可以返回到随机策略=UCB1。*/
 				u->random_policy_chance = atoi(optval);
 
 			/** General AMAF behavior */
 			/* (Only relevant if the policy supports AMAF.
 			 * More variables can be tuned as policy
 			 * parameters.) */
-
+            /*一般AMAF行为*/
+             /*（仅当政策支持AMAF时才相关。
+            *更多变量可以作为策略进行调整
+             *参数。）*/
 			} else if (!strcasecmp(optname, "playout_amaf")) {
 				/* Whether to include random playout moves in
 				 * AMAF as well. (Otherwise, only tree moves
 				 * are included in AMAF. Of course makes sense
 				 * only in connection with an AMAF policy.) */
 				/* with-without: 55.5% (+-4.1) */
+                /*是否包含随机播放
+                 * AAMF也是如此。（否则，只有树移动
+                 * 包含在AMAF中。当然有道理
+                 * 仅与AMAF政策相关。）不含：55.5%（+-4.1）*/
 				if (optval && *optval == '0')
 					u->playout_amaf = false;
 				else
@@ -1008,23 +1038,28 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "playout_amaf_cutoff") && optval) {
 				/* Keep only first N% of playout stage AMAF
 				 * information. */
+                /*仅保留播放阶段AMAF信息的前n%。*/
 				u->playout_amaf_cutoff = atoi(optval);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				/* In node policy, consider prior values
 				 * part of the real result term or part
 				 * of the AMAF term? */
+                /*在节点策略中，考虑先验值是实际结果项的一部分还是AMAF项的一部分？*/
 				u->amaf_prior = atoi(optval);
 
 			/** Performance and memory management */
+            /*性能和内存管理*/
 
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				/* By default, Pachi will run with only single
 				 * tree search thread! */
+                /*默认情况下，pachi只运行一个树搜索线程！*/
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "thread_model") && optval) {
 				if (!strcasecmp(optval, "tree")) {
 					/* Tree parallelization - all threads
 					 * grind on the same tree. */
+                    /*树并行化-所有线程在同一棵树上研磨。*/
 					u->thread_model = TM_TREE;
 					u->virtual_loss = 0;
 				} else if (!strcasecmp(optval, "treevl")) {
@@ -1032,19 +1067,23 @@ uct_state_init(char *arg, struct board *b)
 					 * with virtual losses - this discou-
 					 * rages most threads choosing the
 					 * same tree branches to read. */
+                    /*树并行化，但也有虚拟的损失-这使大多数线程无法选择要读取的同一个树分支。*/
 					u->thread_model = TM_TREEVL;
 				} else
 					die("UCT: Invalid thread model %s\n", optval);
 			} else if (!strcasecmp(optname, "virtual_loss") && optval) {
 				/* Number of virtual losses added before evaluating a node. */
+                /*在评估节点之前添加的虚拟损失数。*/
 				u->virtual_loss = atoi(optval);
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
+                /*即使在对手转弯时也要继续搜索。*/
 				u->pondering_opt = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
 				/* Maximum amount of memory [MiB] consumed by the move tree.
 				 * For fast_alloc it includes the temp tree used for pruning.
 				 * Default is 3072 (3 GiB). */
+                /*移动树消耗的最大内存量[MIB]。对于快速分配，它包括用于修剪的临时树。默认值为3072（3 GiB）*/
 				u->max_tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
 			} else if (!strcasecmp(optname, "fast_alloc")) {
 				u->fast_alloc = !optval || atoi(optval);
@@ -1053,6 +1092,7 @@ uct_state_init(char *arg, struct board *b)
 				 * more than this [MiB]. Default is 10% of max_tree_size.
 				 * Increase to reduce pruning time overhead if memory is plentiful.
 				 * This option is meaningful only for fast_alloc. */
+                /*如果树的消耗量超过此[mib]，则在移动开始时强制修剪。默认值是max_tree_大小的10%。如果内存充足，请增加以减少修剪时间开销。此选项仅对快速分配有意义*/
 				u->pruning_threshold = atol(optval) * 1048576;
 
 			/** Time control */
@@ -1061,15 +1101,18 @@ uct_state_init(char *arg, struct board *b)
 				/* If set, prolong simulating while
 				 * first_best/second_best playouts ratio
 				 * is less than best2_ratio. */
+                /*如果设置，则在最佳的情况下延长模拟时间，最佳子值delta大于最佳比值。*/
 				u->best2_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "bestr_ratio") && optval) {
 				/* If set, prolong simulating while
 				 * best,best_best_child values delta
 				 * is more than bestr_ratio. */
+                /*如果设置，则在最佳的情况下延长模拟时间，最佳子值delta大于最佳比值。*/
 				u->bestr_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "max_maintime_ratio") && optval) {
 				/* If set and while not in byoyomi, prolong simulating no more than
 				 * max_maintime_ratio times the normal desired thinking time. */
+                /*如果设置了且不在Byoyomi中，则延长模拟时间不超过最大维护时间与正常期望思考时间的比值。*/
 				u->max_maintime_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
 				/* At the very beginning it's not worth thinking
@@ -1078,6 +1121,7 @@ uct_state_init(char *arg, struct board *b)
 				 * time up to maximum when fuseki_end percent
 				 * of the board has been played.
 				 * This only applies if we are not in byoyomi. */
+                /*一开始不值得考虑太长时间，因为决赛评估非常嘈杂。因此，逐渐增加思考时间，直到最长的时候，fuseki ou结束百分比的董事会已经发挥。这只适用于我们不在byoyomi。*/
 				u->fuseki_end = atoi(optval);
 			} else if (!strcasecmp(optname, "yose_start") && optval) {
 				/* When yose_start percent of the board has been
@@ -1090,14 +1134,16 @@ uct_state_init(char *arg, struct board *b)
 				 * be much earlier than when real yose start,
 				 * but "yose" is a good short name to convey
 				 * the idea.) */
+                /*当游戏开始时，或者如果我们在Byoyomi，停止花费更多的时间，并将剩余的时间均匀分布。在Fuseki ou end和Yose ou start之间，我们将剩余时间的恒定比例花在每个动作上。（yose-start实际上应该比真正的yose-start早得多，但是“yose”是一个很好的简短名称来表达这个想法。）*/
 				u->yose_start = atoi(optval);
 
 			/** Dynamic komi */
-
+            /*komi*/
 			} else if (!strcasecmp(optname, "dynkomi") && optval) {
 				/* Dynamic komi approach; there are multiple
 				 * ways to adjust komi dynamically throughout
 				 * play. We currently support two: */
+                /*动态Komi方法；有多种方法可以在整个比赛中动态调整Komi。我们目前支持两种：*/
 				char *dynkomiarg = strchr(optval, ':');
 				if (dynkomiarg)
 					*dynkomiarg++ = 0;
@@ -1106,10 +1152,12 @@ uct_state_init(char *arg, struct board *b)
 				} else if (!strcasecmp(optval, "linear")) {
 					/* You should set dynkomi_mask=1 or a very low
 					 * handicap_value for white. */
+                    /*您应该将Dynkomi_Mask设置为1或非常低残疾人价值为白色。*/
 					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "adaptive")) {
 					/* There are many more knobs to
 					 * crank - see uct/dynkomi.c. */
+                    /*还有很多旋钮需要转动-参见UCT/Dynkomi.c.*/
 					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
 				} else
 					die("UCT: Invalid dynkomi mode %s\n", optval);
@@ -1117,6 +1165,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; the default dynkomi_mask=3 allows
 				 * dynkomi even in games where Pachi is white. */
+                /*颜色的位掩码应用dynkomi之前玩家必须使用；默认dynkomi_mask=3允许dynkomi，即使在pachi为白色的游戏中也是如此。*/
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
 				/* If non-zero, re-adjust dynamic komi
@@ -1124,6 +1173,12 @@ uct_state_init(char *arg, struct board *b)
 				 * roughly every N simulations. */
 				/* XXX: Does not work with tree
 				 * parallelization. */
+                /*If non-zero, re-adjust dynamic komi
+				 * throughout a single genmove reading,
+				 * roughly every N simulations. */
+				/* XXX: Does not work with tree
+				 * parallelization. */
+                /*如果非零，重新调整动态Komithroughout一个单一的genmove读数，大致每N次模拟。不适用于树并行化。*/
 				u->dynkomi_interval = atoi(optval);
 			} else if (!strcasecmp(optname, "extra_komi") && optval) {
 				/* Initial dynamic komi settings. This
@@ -1133,33 +1188,39 @@ uct_state_init(char *arg, struct board *b)
 				 * there is not enough time in the search
 				 * to adjust the value properly (e.g. the
 				 * game was interrupted). */
+                /*初始动态Komi设置。这对于自适应Dynkomi策略很有用，因为如果搜索中没有足够的时间来正确调整值（例如游戏被中断），则该策略将作为开始的值（该值不保持固定）。*/
 				u->initial_extra_komi = atof(optval);
 
 			/** Node value result scaling */
-
+            /*节点值结果缩放*/
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
 				 * influenced by win size. Zero means it isn't. */
+                /*游戏结果值的多少应该受赢的大小的影响。零意味着不是。*/
 				u->val_scale = atof(optval);
 			} else if (!strcasecmp(optname, "val_points") && optval) {
 				/* Maximum size of win to be scaled into game
 				 * result value. Zero means boardsize^2. */
+                /*将要缩放到游戏结果值中的最大胜利大小。零表示板大小^2。*/
 				u->val_points = atoi(optval) * 2; // result values are doubled
 			} else if (!strcasecmp(optname, "val_extra")) {
 				/* If false, the score coefficient will be simply
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
+                /*如果为false，则分数系数将简单地添加到值中，而不是因为该值而缩放结果系数。*/
 				u->val_extra = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "val_byavg")) {
 				/* If true, the score included in the value will
 				 * be relative to average score in the current
 				 * search episode inst. of jigo. */
+                /*如果为真，该值中包含的分数将与jigo当前搜索集inst.中的平均分数相对应。*/
 				u->val_byavg = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "val_bytemp")) {
 				/* If true, the value scaling coefficient
 				 * is different based on value extremity
 				 * (dist. from 0.5), linear between
 				 * val_bytemp_min, val_scale. */
+                /*如果为真，则值缩放系数根据值极限（从0.5开始的距离）而不同，在Val_Bytemp_Min、Val_Scale之间为线性。*/
 				u->val_bytemp = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "val_bytemp_min") && optval) {
 				/* Minimum val_scale in case of val_bytemp. */
@@ -1379,10 +1440,13 @@ uct_state_init(char *arg, struct board *b)
 	return u;
 }
 
+//初始化uct引擎，
 struct engine *
 engine_uct_init(char *arg, struct board *b)
 {
+    //初始化引擎状态，
 	struct uct *u = uct_state_init(arg, b);
+    //初始化引擎
 	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "UCT";
 	e->board_print = uct_board_print;

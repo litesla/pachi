@@ -86,7 +86,7 @@ find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, 
 		best_moves_add(c, r[k], best_c, best_r, nbest);
 	} foreach_free_point_end;
 }
-
+//打印棋盘
 void
 print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
 {

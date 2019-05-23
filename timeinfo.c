@@ -29,6 +29,7 @@
 #define MAX_SUDDEN_DEATH_RATIO 2.0
 #define MAX_BYOYOMI_TIME_RATIO 1.1
 
+//
 bool
 time_parse(struct time_info *ti, char *s)
 {

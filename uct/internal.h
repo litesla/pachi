@@ -24,7 +24,7 @@ struct joseki_dict;
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
 
-/* Internal engine state. */
+/* Internal engine state.引擎内部状态 */
 struct uct {
 	int debug_level;
 	enum uct_reporting {
@@ -38,7 +38,7 @@ struct uct {
 	floating_t resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;
 	floating_t max_maintime_ratio;
-	bool pass_all_alive; /* Current value */
+	bool pass_all_alive; /* Current value 当前值*/
 	bool allow_losing_pass;
 	bool territory_scoring;
 	int expand_p;
@@ -57,15 +57,15 @@ struct uct {
 
 	int threads;
 	enum uct_thread_model {
-		TM_TREE, /* Tree parallelization w/o virtual loss. */
-		TM_TREEVL, /* Tree parallelization with virtual loss. */
+		TM_TREE, /* Tree parallelization w/o virtual loss.无虚拟损失的树并行化 */
+		TM_TREEVL, /* Tree parallelization with virtual loss. 树与虚损失并行化。*/
 	} thread_model;
 	int virtual_loss;
-	bool pondering_opt; /* User wants pondering */
-	bool pondering; /* Actually pondering now */
-	bool slave; /* Act as slave in distributed engine. */
-	int max_slaves; /* Optional, -1 if not set */
-	int slave_index; /* 0..max_slaves-1, or -1 if not set */
+	bool pondering_opt; /* User wants pondering 用户想要思考*/
+	bool pondering; /* Actually pondering now 正在思考*/
+	bool slave; /* Act as slave in distributed engine.在分布式引擎中充当从机 */
+	int max_slaves; /* Optional, -1 if not set 可选，如果未设置-1*/
+	int slave_index; /* 0..max_slaves-1, or -1 if not set 0..max_slaves-1或-1（如果未设置）*/
 	enum stone my_color;
 
 	int fuseki_end;
@@ -115,23 +115,28 @@ struct uct {
 	struct pattern_setup pat;
 	/* Various modules (prior, policy, ...) set this if they want pattern
 	 * database to be loaded. */
+    /*各种模块（prior，policy，…）如果想要模式，就设置这个。
+要加载的数据库。*/
 	bool want_pat;
 
 	/* Used within frame of single genmove. */
+    /*在单个genmove的框架内使用*/
 	struct board_ownermap ownermap;
 	/* Used for coordination among slaves of the distributed engine. */
+    /*用于分布式引擎的从机之间的协调*/
 	int stats_hbits;
 	int shared_nodes;
 	int shared_levels;
-	double stats_delay; /* stored in seconds */
+	double stats_delay; /* stored in seconds 以秒为单位存储*/
 	int played_own;
-	int played_all; /* games played by all slaves */
+	int played_all; /* games played by all slaves 所有奴隶玩的游戏*/
 
-	/* Saved dead groups, for final_status_list dead */
+	/* Saved dead groups, for final_status_list dead 所有奴隶玩的游戏*/
 	struct move_queue dead_groups;
 	int dead_groups_move;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
+    /*游戏状态-由setup_state（）、reset_state（）维护*/
 	struct tree *t;
 };
 

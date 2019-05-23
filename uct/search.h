@@ -40,7 +40,7 @@ struct uct_thread_ctx {
 	struct tree *t;//蒙特卡洛树
 	unsigned long seed;//随机种子
 	int games;//总共玩了多少次//传出参数
-	struct time_info *ti;
+	struct time_info *ti;//时间限制
 };
 
 

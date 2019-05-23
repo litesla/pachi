@@ -15,7 +15,7 @@ using namespace caffe;
 extern "C" {
 #include "debug.h"
 #include "util.h"
-
+//调用py的代码
 static shared_ptr<Net<float> > net;
 
 /* Make caffe quiet */

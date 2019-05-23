@@ -14,23 +14,26 @@
 
 struct time_info {
 	/* For how long we can spend the time? */
+    //可以搜索的时间
 	enum time_period {
-		TT_NULL, // No time limit. Other structure elements are undef.
-		TT_MOVE, // Time for the next move.
-		TT_TOTAL, // Time for the rest of the game. Never seen by engine.
+		TT_NULL, // No time limit. Other structure elements are undef . 没有时间限制
+		TT_MOVE, // Time for the next move. 下一步行动的时间到了。
+		TT_TOTAL, // Time for the rest of the game. Never seen by engine.Time for the rest of the game. Never seen by engine.
 	} period;
 	/* How are we counting the time? */
+    /*我们怎么计算时间？*/
 	enum time_dimension {
-		TD_GAMES, // Fixed number of simulations to perform.
-		TD_WALLTIME, // Wall time to spend performing simulations.
+		TD_GAMES, // Fixed number of simulations to perform. 要执行的模拟的固定数目。
+		TD_WALLTIME, // Wall time to spend performing simulations. 用于执行模拟的墙时间。
 	} dim;
 	/* The actual time count. */
+    /*实际时间计数*/
 	struct {
 		int games;     // TD_GAMES
 		int games_max; // TD_GAMES
 		struct {   // TD_WALLTIME
 			/* Main thinking time. 0 if we are already completely
-			 * in byoyomi. */
+			 * in byoyomi.主要思考时间。如果我们已经完全在拜约米 */
 			double main_time;
 
 			/* Byoyomi time. This time must be remembered to avoid
@@ -44,6 +47,7 @@ struct time_info {
 			 * for reference. */
 			/* (In normal time settings, one of _periods or _stones
 			 * is 1.) */
+            /*要遵循的时间设置；如果指定，则忽略GTP时间信息。有用的，例如，当你想让你的机器人在给对手合理的时间玩游戏的同时使其变得更弱时，或者在定时游戏中通过模拟次数强制玩游戏。有关byoyomi time的语法详细信息，请参阅timeinfo.h:time_parse（）description。这一次必须记住，以避免在主要时期结束时仓促行事。如果没有byoyomi，则设置为0。否则，周期和石头都大于零，最初我们有长时间的周期，必须在每个周期中玩石头。如果我们在加拿大玩拜奥米，时间会缩短，直到我们玩了当前时期的所有石头；_max总是保留周期长度作为参考。（在正常时间设置中，其中一个周期或石头是1。）*/
 			double byoyomi_time;
 			int byoyomi_periods;
 			int byoyomi_stones;
@@ -59,6 +63,7 @@ struct time_info {
 	/* If true, this time info is independent from GTP time_left updates,
 	 * which will be ignored. This is the case if the time settings were
 	 * forced on the command line. */
+    /*如果为真，则此时间信息独立于GTP时间剩余更新，这将被忽略。如果在命令行上强制执行时间设置，则会出现这种情况。*/
 	bool ignore_gtp;
 };
 

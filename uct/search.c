@@ -88,7 +88,7 @@ static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
 static volatile int finish_thread;
 static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
-
+//子线程　游戏的多次玩的次数
 static void *
 spawn_worker(void *ctx_)
 {
@@ -98,8 +98,8 @@ spawn_worker(void *ctx_)
 	/* Run */
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
 	/* Finish */
-	pthread_mutex_lock(&finish_serializer);
-	pthread_mutex_lock(&finish_mutex);
+	pthread_mutex_lock(&finish_serializer); //串行锁
+	pthread_mutex_lock(&finish_mutex);//
 	finish_thread = ctx->tid;
 	pthread_cond_signal(&finish_cond);
 	pthread_mutex_unlock(&finish_mutex);
@@ -114,6 +114,7 @@ spawn_worker(void *ctx_)
 /* After it is started, it will update mctx->t to point at some tree
  * used for the actual search, on return
  * it will set mctx->games to the number of performed simulations. */
+//监工线程
 static void *
 spawn_thread_manager(void *ctx_)
 {
@@ -124,14 +125,14 @@ spawn_thread_manager(void *ctx_)
 	fast_srandom(mctx->seed);
 
 	int played_games = 0;
-	pthread_t threads[u->threads];
-	int joined = 0;
+	pthread_t threads[u->threads];//线程代号
+	int joined = 0;//代表由多少个线程结束了
 
-	uct_halt = 0;
+	uct_halt = 0;//
 
 	/* Garbage collect the tree by preference when pondering. */
 	if (u->pondering && t->nodes && t->nodes_size >= t->pruning_threshold) {
-		t->root = tree_garbage_collect(t, t->root);
+		t->root = tree_garbage_collect(t, t->root);//垃圾回收
 	}
 
 	/* Make sure the root node is expanded. */
@@ -145,7 +146,7 @@ spawn_thread_manager(void *ctx_)
 			tree_expand_node(t, n, mctx->b, player_color, u, 1);
 	}
 	
-	/* Spawn threads... */
+	/* Spawn threads... 开启线程*/
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct uct_thread_ctx *ctx = malloc2(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
@@ -154,17 +155,17 @@ spawn_thread_manager(void *ctx_)
 		ctx->ti = mctx->ti;
 		pthread_attr_t a;
 		pthread_attr_init(&a);
-		pthread_attr_setstacksize(&a, 1048576);
-		pthread_create(&threads[ti], &a, spawn_worker, ctx);
+		pthread_attr_setstacksize(&a, 1048576); //默认一个线程是８ｍ　这个栈空间２＾２０
+		pthread_create(&threads[ti], &a, spawn_worker, ctx);//开启线程
 		if (UDEBUGL(4))
 			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
 
-	/* ...and collect them back: */
+	/* ...and collect them back:　由多少个线程结束 */
 	while (joined < u->threads) {
 		/* Wait for some thread to finish... */
-		pthread_cond_wait(&finish_cond, &finish_mutex);
-		if (finish_thread < 0) {
+		pthread_cond_wait(&finish_cond, &finish_mutex);//当你想发送这个信号的时候，请你进行这个锁，一个一个来处理结束的字线程条件等待
+		if (finish_thread < 0) {　//什么情况下小于０
 			/* Stop-by-caller. Tell the workers to wrap up
 			 * and unblock them from terminating. */
 			uct_halt = 1;
@@ -172,18 +173,18 @@ spawn_thread_manager(void *ctx_)
 			 * the termination sequence before we get officially
 			 * stopped - their wake and the stop wake could get
 			 * coalesced. */
-			pthread_mutex_unlock(&finish_serializer);
+			pthread_mutex_unlock(&finish_serializer);//互斥锁
 			continue;
 		}
 		/* ...and gather its remnants. */
 		struct uct_thread_ctx *ctx;
-		pthread_join(threads[finish_thread], (void **) &ctx);
-		played_games += ctx->games;
-		joined++;
+		pthread_join(threads[finish_thread], (void **) &ctx);//等待线程结束。如果线程结束，赋值给ｃｔｘ
+		played_games += ctx->games; 
+		joined++;//
 		free(ctx);
 		if (UDEBUGL(4))
 			fprintf(stderr, "Joined worker %d\n", finish_thread);
-		pthread_mutex_unlock(&finish_serializer);
+		pthread_mutex_unlock(&finish_serializer);//解锁串行结束锁
 	}
 
 	pthread_mutex_unlock(&finish_mutex);
@@ -233,10 +234,10 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	static struct uct_thread_ctx mctx;
 	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti };
 	s->ctx = &mctx;
-	pthread_mutex_lock(&finish_serializer);
+	pthread_mutex_lock(&finish_serializer);//加锁的顺序能换吗
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
-	thread_manager_running = true;
+	thread_manager_running = true;//不能进行交换
 }
 
 struct uct_thread_ctx *

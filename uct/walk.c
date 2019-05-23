@@ -450,7 +450,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	LTREE_DEBUG fprintf(stderr, "\n");
 }
 
-
+//一次蒙特卡洛树搜索
 int
 uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
 {
@@ -656,12 +656,12 @@ end:
 	board_done_noalloc(&b2);
 	return result;
 }
-
+//玩多次
 int
 uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti)
 {
 	int i;
-	for (i = 0; !uct_halt; i++)
+	for (i = 0; !uct_halt; i++) //停机标志，没有明确的停止方式
 		uct_playout(u, b, color, t);
 	return i;
 }

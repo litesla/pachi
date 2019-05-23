@@ -33,13 +33,13 @@ extern bool thread_manager_running;
 
 /* Search thread context */
 struct uct_thread_ctx {
-	int tid;
-	struct uct *u;
-	struct board *b;
-	enum stone color;
-	struct tree *t;
-	unsigned long seed;
-	int games;
+	int tid; //线程id
+	struct uct *u;//引擎中的数据，传入字引擎
+	struct board *b;//棋盘大小
+	enum stone color;//执子颜色
+	struct tree *t;//蒙特卡洛树
+	unsigned long seed;//随机种子
+	int games;//总共玩了多少次//传出参数
 	struct time_info *ti;
 };
 

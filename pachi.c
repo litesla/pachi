@@ -41,16 +41,16 @@ enum engine_id {
 	E_REPLAY,
 	E_PATTERNSCAN,
 	E_PATTERNPLAY,
-	E_MONTECARLO,
-	E_UCT,
-	E_DISTRIBUTED,
-	E_JOSEKI,
+	E_MONTECARLO, //蒙特卡洛树搜索
+	E_UCT,//bcb问题，多臂老虎机问题，得知某个把手，被游戏的次数越少，玩他的概率越高，她赢得概率越高，他被玩的概率越高
+	E_DISTRIBUTED, //分布式计算
+	E_JOSEKI,//不经常用
 #ifdef DCNN
-	E_DCNN,
+	E_DCNN,//神经网络，用的也是蒙特卡洛树算发，加入了深度神经卷积网络
 #endif
-	E_MAX,
+	E_MAX,//表示引擎的个数，编号从0开始，ifdef 作用的是还有代码裁剪
 };
-
+//函数指针数组，下面的都是函数
 static engine_init_t engine_init[E_MAX] = {
 	engine_random_init,
 	engine_replay_init,

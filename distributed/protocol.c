@@ -41,9 +41,9 @@ static int cmd_count = 0;
 
 /* History of gtp commands sent for current game, indexed by move. */
 static struct cmd_history {
-	int gtp_id;
-	char *next_cmd;
-} history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
+	int gtp_id;//确认数字
+	char *next_cmd;//
+} history[MAX_GAMELEN][MAX_CMDS_PER_MOVE]; //【游戏长度】【每步之间记录多少命令】
 
 /* Number of active slave machines working for this master. */
 int active_slaves = 0;
@@ -85,7 +85,7 @@ struct slave_state default_sstate;
 void
 protocol_lock(void)
 {
-	pthread_mutex_lock(&slave_lock);
+	pthread_mutex_lock(&slave_lock);//获取slave锁
 }
 
 /* Release exclusive access to the threads and commands state. */
@@ -560,13 +560,13 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 	/* To make sure the slaves are in sync, we ignore the original id
 	 * and use the board number plus some random bits as gtp id. */
 	static int gtp_id = -1;
-	int moves = is_reset(cmd) ? 0 : b->moves;
+	int moves = is_reset(cmd) ? 0 : b->moves;//
 	if (new_id) {
 		int prev_id = gtp_id;
 		do {
 			/* fast_random() is 16-bit only so the multiplication can't overflow. */
-			gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
-		} while (gtp_id == prev_id);
+			gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN); //获取熬一个新的gtp id，如果前后两个一样，在做一次，知道他俩不一样，为啥要随机，
+		} while (gtp_id == prev_id);//为啥要随机 fast_random返回的是一个随机数，游戏的最大长度，move 是步数
 		reply_count = 0;
 	}
 	snprintf(gtp_cmd, gtp_cmds + CMDS_SIZE - gtp_cmd, "%d %s %s",
@@ -579,12 +579,12 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 	if (new_id) {
 		if (last) last->next_cmd = gtp_cmd;
 		slot = (slot + 1) % MAX_CMDS_PER_MOVE;
-		last = &history[moves][slot];
+		last = &history[moves][slot];//如果这是一个新的命令存起来
 		last->gtp_id = gtp_id;
 		last->next_cmd = NULL;
 	}
 	// Notify the slave threads about the new command.
-	pthread_cond_broadcast(&cmd_cond);
+	pthread_cond_broadcast(&cmd_cond);//条件信号的广播
 }
 
 /* Update the command history, then create a new gtp command
@@ -596,21 +596,21 @@ void
 new_cmd(struct board *b, char *cmd, char *args)
 {
 	// Clear the history when a new game starts:
-	if (!gtp_cmd || is_gamestart(cmd)) {
-		gtp_cmd = gtp_cmds;
-		memset(history, 0, sizeof(history));
+	if (!gtp_cmd || is_gamestart(cmd)) { //初始化命令
+		gtp_cmd = gtp_cmds;// 字符数组，gtp_cmds里面存储命令
+		memset(history, 0, sizeof(history)); //历史命令的数组
 	} else {
 		/* Preserve command history for new slaves.
 		 * To indicate that the slave should only reply to
 		 * the last command we force the id of previous
 		 * commands to be just the move number. */
-		int id = prevent_reply(atoi(gtp_cmd));
+		int id = prevent_reply(atoi(gtp_cmd));//
 		int len = strspn(gtp_cmd, "0123456789");
 		char buf[32];
-		snprintf(buf, sizeof(buf), "%0*d", len, id);
+		snprintf(buf, sizeof(buf), "%0*d", len, id);//向字符数组中输出字符串，是命令的头部id
 		memcpy(gtp_cmd, buf, len);
 
-		gtp_cmd += strlen(gtp_cmd);
+		gtp_cmd += strlen(gtp_cmd);//让gtp指向最后
 	}
 
 	// Let the slave threads send the new gtp command:

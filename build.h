@@ -1,6 +1,6 @@
 #define PACHI_GIT_BRANCH   ""
-#define PACHI_GIT_HASH     "9006846"
-#define PACHI_BUILD_DATE   "4月 15 2019"
+#define PACHI_GIT_HASH     "f383646"
+#define PACHI_BUILD_DATE   "4月 20 2019"
 #define PACHI_BUILD_TARGET "haswell"
 #define PACHI_CFLAGS       " -Wall -ggdb3 -O3 -std=gnu99 -pthread -Wsign-compare -D_GNU_SOURCE -frename-registers -DDATA_DIR=/usr/local/share/pachi -DDCNN -fomit-frame-pointer  -I. -march=native"
 #define PACHI_COMPILER     "cc (Debian 7.3.0-19) 7.3.0"

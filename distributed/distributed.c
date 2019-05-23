@@ -161,7 +161,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	/* Commands that should not be sent to slaves.
 	 * time_left will be part of next pachi-genmoves,
 	 * we reduce latency by not forwarding it here. */
-	if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit)
+	if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit) //等于这些命令直接返回ok
 	    || !strcasecmp(cmd, "pachi-gentbook")
 	    || !strcasecmp(cmd, "pachi-dumptbook")
 	    || !strcasecmp(cmd, "kgs-chat")
@@ -174,7 +174,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	    || !strcasecmp(cmd, "final_status_list"))
 		return P_OK;
 
-	protocol_lock();
+	protocol_lock();//没有这个命令的话执行到这里
 
 	// Create a new command to be sent by the slave threads.
 	new_cmd(b, cmd, args);

@@ -386,7 +386,7 @@ static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool print_progress)
 {
 	struct uct_search_state s;
-	uct_search_start(u, b, color, t, ti, &s);
+	uct_search_start(u, b, color, t, ti, &s); //开始搜索
 	if (UDEBUGL(2) && s.base_playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
 
@@ -453,7 +453,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	}
 
 	u->played_own += ctx->games;
-	return ctx->games;
+	return ctx->games; //返回总模拟次数
 }
 
 /* Start pondering background with @color to play. */
@@ -554,7 +554,7 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 	double start_time = time_now();
 	struct uct *u = e->data;
 	u->pass_all_alive |= pass_all_alive;
-	uct_pondering_stop(u);
+	uct_pondering_stop(u);//该你思考的时候思考
 
 	if (using_dcnn(b)) {
 		// dcnn hack: reset state to make dcnn priors kick in.

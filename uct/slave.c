@@ -56,7 +56,9 @@ static long parent_leaf = 0;
 static long node_not_found = 0;
 
 /* Hash table entry mapping path to node. */
+/*哈希表条目映射到节点的路径*/
 struct tree_hash {
+    //是一个int64类型的
 	path_t coord_path;
 	struct tree_node *node;
 };
@@ -170,7 +172,7 @@ discard_bin_args(char *args)
 		size -= len;
 	}
 }
-
+//通知
 enum parse_code
 uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
 {
@@ -184,6 +186,7 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 
 	/* Force resending the whole command history if we are out of sync
 	 * but do it only once, not if already getting the history. */
+    /*如果不同步，则强制重新发送整个命令历史记录，但只执行一次，如果已经获取了历史记录，则不执行此操作。*/
 	if ((move_number(id) != b->moves || !board_resized)
 	    && !reply_disabled(id) && !is_reset(cmd)) {
 		static char buf[128];

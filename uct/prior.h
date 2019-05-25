@@ -8,7 +8,7 @@ struct tree;
 struct tree_node;
 struct uct;
 struct board;
-
+//映射
 struct prior_map {
 	struct board *b;
 	enum stone to_play;
@@ -16,11 +16,14 @@ struct prior_map {
 	/* [board_size2(b)] array, move_stats are the prior
 	 * values to be assigned to individual moves;
 	 * move_stats.value is not updated. */
+    /*[Board_size2（b）]数组，move_stats是分配给单个移动的先前值；move_stats.value不更新。*/
 	struct move_stats *prior;
 	/* [board_size2(b)] array, whether to compute
 	 * prior for the given value. */
+    /*[Board_size2（b）]数组，是否先计算给定值。*/
 	bool *consider;
 	/* [board_size2(b)] array from cfg_distances() */
+    /*来自cfg_Distances（）的[Board_Size2（b）]数组*/
 	int *distances;
 };
 

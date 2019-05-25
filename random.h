@@ -9,8 +9,10 @@ void fast_srandom(unsigned long seed);
 unsigned long fast_getseed(void);
 
 /* Note that only 16bit numbers can be returned. */
+/*请注意，只能返回16位数字。*/
 uint16_t fast_random(unsigned int max);
 /* Use this one if you want larger numbers. */
+/*如果你想要更大的数字，就用这个。*/
 static uint32_t fast_irandom(unsigned int max);
 
 /* Get random number in [0..1] range. */

@@ -44,7 +44,7 @@ static void
 board_setup(struct board *b)
 {
 	memset(b, 0, sizeof(*b));
-
+    //初始值为－１，且没有颜色
 	struct move m = { pass, S_NONE };
 	b->last_move = b->last_move2 = b->last_move3 = b->last_move4 = b->last_ko = b->ko = m;
 }

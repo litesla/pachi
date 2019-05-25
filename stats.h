@@ -9,6 +9,7 @@
  * What this means in practice is that perhaps the value will get
  * slightly wrong, but not drastically corrupted. */
 
+//floating_t 是 float  赢得次数 玩的总次数，
 struct move_stats {
 	floating_t value; // BLACK wins/playouts
 	int playouts; // # of playouts

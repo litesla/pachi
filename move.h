@@ -10,7 +10,9 @@
 
 typedef int coord_t;
 
+//棋子的计算
 #define coord_xy(board, x, y) ((x) + (y) * board_size(board))
+//他提前的讲xy放入了c的第0和第一个位置
 #define coord_x(c, b) (board_statics.coord[c][0])
 #define coord_y(c, b) (board_statics.coord[c][1])
 /* TODO: Smarter way to do this? */
@@ -41,7 +43,8 @@ char *coord2str(coord_t c, struct board *b);
 char *coord2sstr(coord_t c, struct board *b);
 coord_t str2coord(char *str, int board_size);
 
-
+//位置（一一映射） 和颜色x × size + y = coord 
+//传输方便
 struct move {
 	coord_t coord;
 	enum stone color;

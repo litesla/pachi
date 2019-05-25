@@ -5,13 +5,14 @@ struct board;
 struct engine;
 struct time_info;
 
+//命令执行的状态
 enum parse_code {
-	P_OK,
+	P_OK,//代表成功，数值为0
 	P_NOREPLY,
 	P_DONE_OK,
 	P_DONE_ERROR,
-	P_ENGINE_RESET,
-	P_UNKNOWN_COMMAND,
+	P_ENGINE_RESET, //引擎被重置
+	P_UNKNOWN_COMMAND,//未知的命令
 };
 
 typedef struct
@@ -21,7 +22,8 @@ typedef struct
 	int   id;
 	int   replied;
 } gtp_t;
-
+/*to_传入一个字符串类型 strcspn 后面的那些字符在那个位置上，to_指向命令头，next指向
+ * 将前部分置位为一个单独的字符串，next后移，strspn是跳过那些非空字符的起始位置，就是找参数*/
 #define next_tok(to_) \
 	to_ = gtp->next; \
 	gtp->next = gtp->next + strcspn(gtp->next, " \t\r\n"); \

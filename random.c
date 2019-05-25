@@ -4,6 +4,7 @@
 
 
 /* Simple Park-Miller for floating point; LCG as used in glibc and other places */
+/*用于浮点的简单Park Miller；用于glibc和其他地方的lcg*/
 
 
 /********************************************************************************************/
@@ -13,7 +14,7 @@
  * mingw-w64's __thread is painfully slow. */
 
 static int tls_index = -1;
-
+//在主函数之前运行
 static void __attribute__((constructor))
 init_fast_random()
 {
@@ -48,7 +49,9 @@ fast_random(unsigned int max)
 
 /********************************************************************************************/
 #ifndef NO_THREAD_LOCAL
-
+//线程中的随机变量，为了完成线程的独立性
+//随机的初始值 在计算过程中是多线程的，为了还原现场
+//每个线程有一个独立的随机种子
 static __thread unsigned long pmseed = 29264;
 
 void
@@ -62,10 +65,12 @@ fast_getseed(void)
 {
 	return pmseed;
 }
-
+//他要生成一个不大于max的随机数 列成一个公式(x×max)/(2^16) < max 
 uint16_t
 fast_random(unsigned int max)
 {
+    //寻找的一个尽可能长的循环节，每个状态只出现一次，在这个序列环中不会出现分叉
+    //运用加法的情况是乘法无法跳出0状态
 	pmseed = ((pmseed * 1103515245) + 12345) & 0x7fffffff;
 	return ((pmseed & 0xffff) * max) >> 16;
 }

@@ -23,18 +23,24 @@
 /* Allocate tree node(s). The returned nodes are initialized with zeroes.
  * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
+/*分配树节点。返回的节点初始化为零。如果内存不足，则返回空值。此函数可以由多个线程并行调用。
+ *
+ *这个是先申请了一个巨大的内存池，你要几个给你几个
+ * */
 static struct tree_node *
 tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 {
 	struct tree_node *n = NULL;
 	size_t nsize = count * sizeof(*n);
+    //无锁化编程，他是原子操作，他返回node_size的值，然后将node_size ＋上nsize 的值
 	size_t old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
-
+    //一个是快速分配，在已有的内存中分配　另一个是非快速分配　直接申请
 	if (fast_alloc) {
 		if (old_size + nsize > t->max_tree_size)
 			return NULL;
 		assert(t->nodes != NULL);
 		n = (struct tree_node *)(t->nodes + old_size);
+        //算出这篇空间的首地址，置为０
 		memset(n, 0, nsize);
 	} else {
 		n = calloc2(count, sizeof(*n));
@@ -44,16 +50,19 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 
 /* Initialize a node at a given place in memory.
  * This function may be called by multiple threads in parallel. */
+/*在内存中的给定位置初始化节点。此函数可以由多个线程并行调用。*/
 static void
 tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth)
 {
 	static volatile unsigned int hash = 0;
-	n->coord = coord;
-	n->depth = depth;
+	n->coord = coord;//节点在棋盘的位置
+	n->depth = depth;//节点深度
 	/* n->hash is used only for debugging. It is very likely (but not
 	 * guaranteed) to be unique. */
-	hash_t h = n - (struct tree_node *)0;
+    /*n->hash仅用于调试。它很可能（但不能保证）是独一无二的*/
+	hash_t h = n - (struct tree_node *)0;//重新设置哈希值
 	n->hash = (h << 32) + (hash++ & 0xffffffff);
+    //设置最大深度
 	if (depth > t->max_depth)
 		t->max_depth = depth;
 }
@@ -560,22 +569,38 @@ tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *l
  * of the board in tree_expand_node() and possibly flip along symmetry axes
  * to another part of the board in tree_promote_at(). We follow b->symmetry
  * guidelines here. */
-
+/*树对称：如果可能，我们将把树定位到树中板的一个单独部分_expand_node（），并可能沿着对称轴翻转到树中板的另一个部分_promote_at（）。我们在这里遵循b->symmetryguidelines。*/
 
 /* This function must be thread safe, given that board b is only modified by the calling thread. */
+/*这个函数必须是线程安全的，因为B板只被调用线程修改。*/
 void
 tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity)
 {
 	/* Get a Common Fate Graph distance map from parent node. */
+    /*从父节点获取一个公共的命运图距离图。*/
 	int distances[board_size2(b)];
+    //判断是不是－１　或者是－２　不是第一步第二步
 	if (!is_pass(b->last_move.coord) && !is_resign(b->last_move.coord)) {
 		cfg_distances(b, node_coord(node), distances, TREE_NODE_D_MAX);
 	} else {
 		// Pass or resign - everything is too far.
+        //通过或辞职-一切都太远了。
+        /*
+         #define foreach_point(board_) \
+	do { \
+		coord_t c = 0; \
+		for (; c < board_size(board_) * board_size(board_); c++)
+
+    #define foreach_point_end \
+	    } while (0)
+
+         */
+        //初始化每个位置的值
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
 	}
 
 	/* Get a map of prior values to initialize the new nodes with. */
+    /*获取先前值的映射以初始化新节点。*/
 	struct prior_map map = {
 		.b = b,
 		.to_play = color,
@@ -583,35 +608,42 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		.distances = distances,
 	};
 	// Include pass in the prior map.
+    //在上一个地图中包括通行证。
 	struct move_stats map_prior[board_size2(b) + 1]; map.prior = &map_prior[1];
 	bool map_consider[board_size2(b) + 1]; map.consider = &map_consider[1];
 	memset(map_prior, 0, sizeof(map_prior));
 	memset(map_consider, 0, sizeof(map_consider));
 	map.consider[pass] = true;
 	int child_count = 1; // for pass
+    //计算可以落子的点，有几个就计算几次
 	foreach_free_point(b) {
 		assert(board_at(b, c) == S_NONE);
 		if (!board_is_valid_play_no_suicide(b, color, c))
 			continue;
 		map.consider[c] = true;
-		child_count++;
+		child_count++;//统计有几个空闲的位置
 	} foreach_free_point_end;
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes (all at once if fast_alloc) */
+    /*现在，创建节点（如果快速分配，则一次创建所有节点）*/
 	struct tree_node *ni = t->nodes ? tree_alloc_node(t, child_count, true) : tree_alloc_node(t, 1, false);
 	/* In fast_alloc mode we might temporarily run out of nodes but this should be rare. */
+    /*在fast-alloc模式下，我们可能会暂时耗尽节点，但这种情况应该很少发生。*/
 	if (!ni) {
 		node->is_expanded = false;
 		return;
 	}
+    //ni是我们的第一个节点，　第一个节点没有位置
 	tree_setup_node(t, ni, pass, node->depth + 1);
 
 	struct tree_node *first_child = ni;
 	ni->parent = node;
+    //他的走法是pass
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
 
 	/* The loop considers only the symmetry playground. */
+    /*环只考虑对称运动场。*/
 	if (UDEBUGL(6)) {
 		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
 				coord2sstr(node_coord(node), b),
@@ -630,21 +662,24 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 					continue;
 				}
 			}
-
+            //映射转换位置，将ｉ，ｊ换算成ｃ值
 			coord_t c = coord_xy(t->board, i, j);
-			if (!map.consider[c]) // Filter out invalid moves
+			if (!map.consider[c]) // Filter out invalid moves 筛选出无效移动
 				continue;
-			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
+			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...我发现“c3 c3”有一些序列…
 
 			struct tree_node *nj = t->nodes ? first_child + child++ : tree_alloc_node(t, 1, false);
+            //设置节点，位置和深度
 			tree_setup_node(t, nj, c, node->depth + 1);
+            //串成一个串　
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
 			ni->d = distances[c];
 		}
 	}
-	node->children = first_child; // must be done at the end to avoid race
+    //链接起这个串
+	node->children = first_child; // must be done at the end to avoid race　必须在比赛结束时进行以避免比赛
 }
 
 

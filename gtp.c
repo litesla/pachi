@@ -33,8 +33,8 @@ typedef enum parse_code
 
 typedef struct
 {
-	char *cmd;
-	gtp_func_t f;
+	char *cmd;//命令
+	gtp_func_t f;//命令执行的函数
 } gtp_command_t;
 
 static gtp_command_t commands[];
@@ -108,6 +108,7 @@ gtp_final_score_str(struct board *board, struct engine *engine, char *reply, int
 /* List of public gtp commands. The internal command pachi-genmoves is not exported,
  * it should only be used between master and slaves of the distributed engine.
  * For now only uct engine supports gogui-analyze_commands. */
+/*公共GTP命令列表。内部命令pachi genmoves不导出，只能在分布式引擎的主引擎和从引擎之间使用，目前只有UCT引擎支持gogui-analyze_命令。*/
 static char*
 known_commands(struct engine *engine)
 {
@@ -115,7 +116,8 @@ known_commands(struct engine *engine)
 	char *str = buf;
 	
 	for (int i = 0; commands[i].cmd; i++) {
-		char *cmd = commands[i].cmd;		
+		char *cmd = commands[i].cmd;	
+        //str_prefix 字节比较
 		if (str_prefix("gogui", cmd) ||
 		    str_prefix("pachi-genmoves", cmd))
 			continue;		
@@ -128,10 +130,12 @@ known_commands(struct engine *engine)
 }
 
 /* Return true if cmd is a valid gtp command. */
+/*如果cmd是有效的gtp命令，则返回true。*/
 bool
 gtp_is_valid(struct engine *e, const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
+    //用于在c串haystack中查找c串needle，忽略大小写。如果找到则返回needle串在haystack串中第一次出现的位置的char指针.
 	const char *s = strcasestr(known_commands(e), cmd);
 	if (!s) return false;
 	if (s != known_commands(e) && s[-1] != '\n') return false;
@@ -196,6 +200,7 @@ cmd_quit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	exit(0);
 }
 
+//设置棋盘大小
 static enum parse_code
 cmd_boardsize(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
 {
@@ -342,6 +347,7 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	struct time_info *ti_genmove = time_info_genmove(board, ti, color);
 	coord_t c = (board->fbook ? fbook_check(board) : pass);
 	if (is_pass(c))
+        //调用genmove 引擎下的命令
 		c = engine->genmove(engine, board, ti_genmove, color, !strcasecmp(gtp->cmd, "kgs-genmove_cleanup"));
 		
 	struct move m = { .coord = c, .color = color };
@@ -754,16 +760,17 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	gtp_t gtp_struct = { .next = buf, .id = -1 };
 	gtp_t *gtp = &gtp_struct;
+    //cmd就指向第一段命令的
 	next_tok(gtp->cmd);
-	
+    //跳过数字
 	if (isdigit(*gtp->cmd)) {
 		gtp->id = atoi(gtp->cmd);
 		next_tok(gtp->cmd);
 	}
-
+    //并且不为空
 	if (!*gtp->cmd)
 		return P_OK;
-
+    //判断当前引擎是否有和这个函数 和这个命令是否有效
 	if (engine->notify && gtp_is_valid(engine, gtp->cmd)) {
 		char *reply;
 		enum parse_code c = engine->notify(engine, board, gtp->id, gtp->cmd, gtp->next, &reply);
@@ -776,16 +783,20 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			gtp_error(gtp, reply, NULL);
 			/* This is an internal error for the engine, but
 			 * it is still OK from main's point of view. */
+            /*这是发动机的一个内部错误，但从MAIN的角度来看仍然可以。*/
 			return P_OK;
 		} else if (c != P_OK) {
 			return c;
 		}
 	}
-	
+    //commands 是一个静态结构体数组，分别是命令和命令执行的函数
 	for (int i = 0; commands[i].cmd; i++)
+        //匹配命令
 		if (!strcasecmp(gtp->cmd, commands[i].cmd)) {
+            //执行命令匹配函数
 			enum parse_code ret = commands[i].f(board, engine, ti, gtp);
 			/* For functions convenience: no reply means empty reply */
+            /*为方便功能：无应答表示空应答*/
 			if (!gtp->replied)
 				gtp_reply(gtp, NULL);
 			return ret;

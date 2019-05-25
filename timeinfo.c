@@ -195,15 +195,20 @@ time_sub(struct time_info *ti, double interval, bool new_move)
 }
 
 /* Returns the current time. */
+/*返回当前时间*/
 double
 time_now(void)
 {
 #if _POSIX_TIMERS > 0
 	struct timespec now;
+    //CLOCK_REALTIME 统当前时间，从1970年1.1日算起
 	clock_gettime(CLOCK_REALTIME, &now);
+    //第一个是秒，第二个是纳秒
 	return now.tv_sec + now.tv_nsec/1000000000.0;
 #else
+    //一个是秒，一个是微秒
 	struct timeval now;
+    //获取系统时间
 	gettimeofday(&now, NULL);
 	return now.tv_sec + now.tv_usec/1000000.0;
 #endif
@@ -221,6 +226,7 @@ time_str()
 }
 
 /* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
+/*在给定的时间间隔内睡眠（秒）。如果间隔小于0，立即返回*/
 void
 time_sleep(double interval)
 {

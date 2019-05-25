@@ -152,12 +152,15 @@ void uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbes
  * structure in order to be able to easily descend in multiple trees
  * in parallel (e.g. main tree and local tree) or compute cummulative
  * "path value" throughout the tree descent. */
+/*这是用于降树的状态；我们使用这个包装结构以便能够在多个树中并行下降（例如主树和本地树），或者在整个树下降过程中计算累积的“路径值”。*/
 struct uct_descent {
 	/* Active tree nodes: */
+    /*活动树节点：*/
 	struct tree_node *node; /* Main tree. */
 	struct tree_node *lnode; /* Local tree. */
 	/* Value of main tree node (with all value factors, but unbiased
 	 * - without exploration factor), from black's perspective. */
+    /*从Black的角度看，主树节点的值（具有所有的值因子，但没有偏倚-没有探索因子）。*/
 	struct move_stats value;
 };
 

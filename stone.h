@@ -1,6 +1,9 @@
 #ifndef PACHI_STONE_H
 #define PACHI_STONE_H
 
+//棋子，没有子，黑子，白字，
+//为了计算方便，当我们要求棋盘大小是19*19的情况下，他会加一层小边
+//就是21*21的，就是旗子边的位置
 enum stone {
 	S_NONE,
 	S_BLACK,

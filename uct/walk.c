@@ -25,7 +25,7 @@
 
 #define DESCENT_DLEN 512
 
-
+//UCT进度文本
 void
 uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
@@ -119,9 +119,11 @@ void
 uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
+    /*表示json行的前缀*/
 	fprintf(stderr, "{\"%s\": {", final ? "move" : "frame");
 
 	/* Plaout count */
+    /*编排计数*/
 	fprintf(stderr, "\"playouts\": %d", playouts);
 
 	/* Dynamic komi */
@@ -208,10 +210,12 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 {
 	switch (u->reporting) {
 		case UR_TEXT:
+            //打印进度文本
 			uct_progress_text(u, t, color, playouts);
 			break;
 		case UR_JSON:
 		case UR_JSON_BIG:
+            //依旧是打印信息
 			uct_progress_json(u, t, color, playouts, final,
 			                  u->reporting == UR_JSON_BIG);
 			break;
@@ -236,7 +240,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 			break;
 		default: assert(0);
 	}
-
+    //打印一行字符串等其他信息
 	gogui_show_livegfx(buf->str);
 }
 
@@ -451,10 +455,12 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 }
 
 //一次蒙特卡洛树搜索
+//先走到叶子节点，从叶子节点走到其他节点，从
 int
 uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
 {
 	struct board b2;
+    //棋盘复制
 	board_copy(&b2, b);
 
 	struct playout_amafmap amaf;
@@ -462,26 +468,32 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
-	struct tree_node *n = t->root;
+    /*沿着树走，直到找到一片叶子，然后展开它，做一个随机的游戏。*/
+	struct tree_node *n = t->root;//蒙特卡洛树的根节点
 	enum stone node_color = stone_other(player_color);
 	assert(node_color == t->root_color);
 
 	/* Make sure root node is expanded. Normally that's the case,
 	 * except direct calls to uct_playout() */
+    /*确保根节点已展开。通常情况是这样的，除了直接呼叫UCT的PlayOut（）。*/
+    /* 判断他是否是叶子节点，展开只做一次，*//*无锁化编程，先锁上，获取这个变量的值，然后赋值为１，返回赋值之前的值，所以只有第一个可以抢到这个任务*/
 	if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
 		tree_expand_node(t, n, b, player_color, u, 1);
 	
-	/* Tree descent history. */
+	/* Tree descent history.下降历史 */
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
+    /*XXX：这有点乱，因为@n和下降[dlen-1]，节点是多余的。*/
 	struct uct_descent descent[DESCENT_DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
+    /*序列的总值*/
 	struct move_stats seq_value = { .playouts = 0 };
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */
+    /*沿下降的最后一个“重要”节点（即高于配置的播放次数的节点）。黑色和白色。*/
 	struct tree_node *significant[2] = { NULL, NULL };
 	if (n->u.playouts >= u->significant_threshold)
 		significant[node_color - 1] = n;
@@ -496,14 +508,17 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- (#%d) UCT walk with color %d\n", t->root->u.playouts, player_color);
 
+    //下沉循环
 	while (!tree_leaf_node(n) && passes < 2) {
 		spaces[dlen - 1] = ' '; spaces[dlen] = 0;
 
 
 		/*** Choose a node to descend to: */
+        /*选择要下降到的节点*/
 
 		/* Parity is chosen already according to the child color, since
 		 * it is applied to children. */
+        /*已经根据子颜色选择了奇偶校验，因为它应用于子颜色。*/
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
 
@@ -511,8 +526,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		descent[dlen] = descent[dlen - 1];
 		if (u->local_tree && (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d)) {
 			/* Start new local sequence. */
+            /*启动新的本地序列。*/
 			/* Remember that node_color already holds color of the
 			 * to-be-found child. */
+            /*记住，节点颜色已经保存了待找到子节点的颜色。*/
 			descent[dlen].lnode = node_color == S_BLACK ? t->ltree_black : t->ltree_white;
 		}
 
@@ -523,6 +540,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 
 		/*** Perform the descent: */
+        /*执行下降：*/
 
 		if (descent[dlen].node->u.playouts >= u->significant_threshold) {
 			significant[node_color - 1] = descent[dlen].node;
@@ -559,6 +577,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		}
 
 		assert(node_coord(n) >= -1);
+        //下沉策略分为２种一种是ucb1 一种是ucb_amaf
 		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(&b2));
 
 		if (is_pass(node_coord(n)))
@@ -574,6 +593,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * the maximum in multi-threaded case but not by much so it's ok.
 		 * The size test must be before the test&set not after, to allow
 		 * expansion of the node later if enough nodes have been freed. */
+        /*我们需要确保只有一个线程扩展节点。如果两个线程不幸在同一个节点上相遇，那么后一个线程只需从节点本身进行另一个模拟，没什么大不了的。在多线程情况下，节点的大小可能会超过最大值，但不会太大，所以可以。大小测试必须在测试之前进行，而不是在测试之后进行，以便在释放足够的节点后允许扩展节点。*/
+        /*当前节点是叶子节点，切没有被展开过，每个节点会有一个初始值，为了防止０值*/
 		if (tree_leaf_node(n)
 		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < u->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
@@ -591,10 +612,13 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	 * of the code, it is from white's perspective, but here positive
 	 * number is black's win! Be VERY CAREFUL.
 	 * !!! !!! !!! */
+    /*警告：“结果”数字非常混乱。在代码的某些部分，它是从白色的角度看的，但这里正数是黑色的胜利！小心点。*/
 
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
+    /*在并行树搜索的情况下，如果两个线程咀嚼同一个节点，则断言可能不成立。*/
+    /*获取结果　模拟*/
 	result = uct_leaf_node(u, &b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
@@ -604,9 +628,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	/* Record the result. */
-
+    /*记录结果*/
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, node_color, significant, result);
+    /*更新权值*/
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
 
 	stats_add_result(&t->avg_score, (float)result / 2, 1);
@@ -622,23 +647,29 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * found sequence start; record_local_sequence() may
 		 * pick longer sequences from descent history then,
 		 * which is expected as it will create new lnodes. */
+        /*获取局部序列并将其记录在LTREE中。*/
+        /*我们将在我们的下降历史中查找序列开始，然后为每个找到的序列开始运行record_local_sequence（）；record_local_sequence（）可能会从下降历史中选择更长的序列，因为它将创建新的节点。*/
 		enum stone seq_color = player_color;
 		/* First move always starts a sequence. */
+        /*第一步总是开始一个序列。*/
 		record_local_sequence(u, t, &b2, descent, dlen, 1, seq_color);
 		seq_color = stone_other(seq_color);
 		for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
 			if (u->local_tree_allseq) {
 				/* We are configured to record all subsequences. */
+                /*我们被配置为记录所有子序列。*/
 				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 			if (descent[dseqi].node->d >= u->tenuki_d) {
 				/* Tenuki! Record the fresh sequence. */
+                /*Tenuki！记录新序列。*/
 				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 			if (descent[dseqi].lnode && !descent[dseqi].lnode) {
 				/* Record result for in-descent picked sequence. */
+                /*记录下降选择序列中的结果。*/
 				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
@@ -647,6 +678,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 end:
 	/* We need to undo the virtual loss we added during descend. */
+    /*我们需要撤销在下降过程中添加的虚拟损失。*/
 	if (u->virtual_loss) {
 		for (; n->parent; n = n->parent) {
 			__sync_fetch_and_sub(&n->descents, u->virtual_loss);

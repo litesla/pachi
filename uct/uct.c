@@ -382,31 +382,39 @@ uct_done(struct engine *e)
 
 
 /* Run time-limited MCTS search on foreground. */
+/*前台运行时间有限的MCT搜索*/
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool print_progress)
 {
 	struct uct_search_state s;
-	uct_search_start(u, b, color, t, ti, &s); //开始搜索
+	uct_search_start(u, b, color, t, ti, &s); //开始搜索 他没有阻塞 他分配一个监工，监工有若干小弟
 	if (UDEBUGL(2) && s.base_playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
 
 	/* The search tree is ctx->t. This is currently == . It is important
 	 * to reference ctx->t directly since the
 	 * thread manager will swap the tree pointer asynchronously. */
-
+    /*搜索树是ctx->t。这是当前的==。直接引用ctx->t很重要，因为线程管理器将异步交换树指针*/
 	/* Now, just periodically poll the search tree. */
 	/* Note that in case of TD_GAMES, threads will not wait for
 	 * the uct_search_check_stop() signalization. */
+    /*现在，只需定期轮询搜索树。*/
+    /*注意，在TD-U游戏中，线程不会等待
+     * *UCT搜索检查停止（）信号。*/
 	while (1) {
+        //睡眠一个时长
 		time_sleep(TREE_BUSYWAIT_INTERVAL);
 		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
 		 * time control is broken. But if it happens to be less, we still search
 		 * at least 100ms otherwise the move is completely random. */
-
+        /*树总线等待间隔不得小于所需时间，否则时间控制将中断。但是如果它恰好是较少的，我们仍然搜索至少100毫秒，否则移动是完全随机的。*/
+        //返回总模拟的总次数
 		int i = uct_search_games(&s);
 		/* Print notifications etc. */
+        /*打印通知等*/
 		uct_search_progress(u, b, color, t, ti, &s, i);
 		/* Check if we should stop the search. */
+        /*检查我们是否应该停止搜索。如果可以就跳出循环　这里面考虑了一种是否提前开始搜索，另一种是否是否延迟搜索*/
 		if (uct_search_check_stop(u, b, color, t, ti, &s, i))
 			break;
 	}
@@ -423,6 +431,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
+        /*现在，开始一个额外的单线程播放。*/
 		struct time_info debug_ti = {
 			.period = TT_MOVE,
 			.dim = TD_GAMES,
@@ -457,6 +466,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 }
 
 /* Start pondering background with @color to play. */
+/*用@color开始思考背景。*/
 static void
 uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color)
 {
@@ -466,21 +476,25 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	u->pondering = true;
 
 	/* We need a local board copy to ponder upon. */
+    /*我们需要一份本地董事会的副本来考虑。*/
 	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
 	/* *b0 did not have the genmove'd move played yet. */
+    /**b0尚未播放genmove'd move。*/
 	struct move m = { node_coord(t->root), t->root_color };
 	int res = board_play(b, &m);
 	assert(res >= 0);
 	setup_dynkomi(u, b, stone_other(m.color));
 
 	/* Start MCTS manager thread "headless". */
+    /*启动MCTS管理器线程“headless”。*/
 	static struct uct_search_state s;
 	uct_search_start(u, b, color, t, NULL, &s);
 }
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode, and
  * to stop the background search for a slave in the distributed engine. */
+/*uct_search_stop（）前端用于思考（非genmove）模式，并停止后台搜索分布式引擎中的从机。*/
 void
 uct_pondering_stop(struct uct *u)
 {
@@ -488,9 +502,11 @@ uct_pondering_stop(struct uct *u)
 		return;
 
 	/* Stop the thread manager. */
+    //停止线程思考
 	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
 		if (u->pondering) fprintf(stderr, "(pondering) ");
+        //写入停止思考时未收集的信息
 		uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
 	}
 	if (u->pondering) {
@@ -519,6 +535,7 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	/* How to decide whether to use dynkomi in this game? Since we use
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
 	 * the last genmove issued. */
+    /*如何决定是否在游戏中使用Dynkomi？因为我们使用思考，这不是简单的“玩谁”的问题。根据上次发布的genmove决定。*/
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
 
@@ -531,6 +548,7 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	 * is odd so we adjust the komi only if it is even (for a board of
 	 * odd size). We are not trying  to get an exact evaluation for rare
 	 * cases of seki. For details see http://home.snafu.de/jasiek/parity.html */
+    /*对小米的日本规则做出悲观的假设，以避免中国规则赢0.5时输0.5。如果komi的整数部分是奇数，规则通常会给出相同的优胜者，因此我们只在komi是偶数时调整它（对于奇数大小的板）。我们不想对罕见的seki病例进行准确的评估。有关详细信息，请参阅http://home.snafu.de/jasiek/parity.html*/
 	if (u->territory_scoring && (((int)floor(b->komi) + board_size(b)) & 1)) {
 		b->komi += (color == S_BLACK ? 1.0 : -1.0);
 		if (UDEBUGL(0))
@@ -544,14 +562,18 @@ uct_livegfx_hook(struct engine *e)
 {
 	struct uct *u = e->data;
 	/* Hack: Override reportfreq to get decent update rates in GoGui */
+    /*hack：覆盖reportfreq以在gogui获得合适的更新率*/
 	u->reportfreq = MIN(u->reportfreq, 1000);
 }
 
 static struct tree_node *
 genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
+    //重置一个时间为0
 	reset_dcnn_time();
+    //获取当前系统的时间，有两个级别
 	double start_time = time_now();
+    //初始化引擎状态
 	struct uct *u = e->data;
 	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);//该你思考的时候思考
@@ -567,11 +589,13 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 
 	uct_genmove_setup(u, b, color);
 
-        /* Start the Monte Carlo Tree Search! */
+    /* Start the Monte Carlo Tree Search! */
+    /*开始蒙特卡洛搜索*/
 	int base_playouts = u->t->root->u.playouts;
 	int played_games = uct_search(u, b, ti, color, u->t, false);
 
 	struct tree_node *best;
+    //返回最好的结果
 	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, best_coord);
 
 	if (UDEBUGL(2)) {
@@ -580,7 +604,7 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
 			total_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
 	}
-
+    //写入本次模拟的信息
 	uct_progress_status(u, u->t, color, played_games, best_coord);
 
 	return best;
@@ -589,7 +613,7 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 static coord_t
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
-	struct uct *u = e->data;
+	struct uct *u = e->data;//引擎状态
 	coord_t best_coord;
 	struct tree_node *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
 
@@ -615,6 +639,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
+    /*一次传球之后，思考是有害的，有两个原因：（i）即使比赛结束，我们也可能继续思考。当然，这也是对手辞职的原因。（ii）更重要的是，由于UCT将开始切断任何季后赛，所有人的地图将被扭曲。*/
 	if (u->pondering_opt && u->t && !is_pass(node_coord(best))) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
@@ -1463,7 +1488,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
 	e->livegfx_hook = uct_livegfx_hook;
-	e->data = u;
+	e->data = u;//将cut状态赋值给data，他是动态申请的地址
 	if (u->slave)
 		e->notify = uct_notify;
 

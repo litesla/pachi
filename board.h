@@ -48,19 +48,25 @@ enum e_sym {
 
 /* Some engines might normalize their reading and skip symmetrical
  * moves. We will tell them how can they do it. */
+/*有些引擎可能会正常化它们的读数并跳过对称移动。我们会告诉他们怎么做。*/
 struct board_symmetry {
 	/* Playground is in this rectangle. */
+    /*操场在这个长方形里。*/
 	int x1, x2, y1, y2;
 	/* d ==  0: Full rectangle
 	 * d ==  1: Top triangle */
+     /*d ==  0: Full rectangle
+	 * d ==  1: Top triangle*/
 	int d;
 	/* General symmetry type. */
 	/* Note that the above is redundant to this, but just provided
 	 * for easier usage. */
+    /*一般对称型。*/
+/*请注意，上述内容对此是多余的，但只是为了便于使用而提供的*/
 	enum e_sym type;
 };
 
-
+//就是一个64位整形
 typedef uint64_t hash_t;
 #define PRIhash PRIx64
 
@@ -97,11 +103,14 @@ struct neighbor_colors {
 /* Quick hack to help ensure tactics code stays within quick board limitations.
  * Ideally we'd have two different types for boards and quick_boards. The idea
  * of having casts / duplicate api all over the place isn't so appealing though... */
+/*快速黑客，以帮助确保战术代码保持在快速板的限制。理想情况下，我们有两种不同类型的板和快速板。尽管如此，在整个地方强制转换重复的API的想法并没有那么吸引人……
+ * */
 #ifndef QUICK_BOARD_CODE
 #define FB_ONLY(field)  field
 #else
 #define FB_ONLY(field)  field ## _disabled
 // Try to make error messages more helpful ...
+//尝试使错误消息更有用…   _disabled 残疾的
 #define clen clen_field_not_supported_for_quick_boards
 #define flen flen_field_not_supported_for_quick_boards
 #endif
@@ -114,6 +123,15 @@ struct neighbor_colors {
  * However, we accept suicide moves by the opponent, so we
  * should work with rules allowing suicide, just not taking
  * full advantage of them. */
+/*目前几乎从未考虑过规则集；
+ *董事会的执行基本上是中国的规则（障碍
+ *石头补偿）W/自杀（或者你可以把它看作
+ *新西兰不含汉迪石材补偿），而发动机
+ *执行不自杀，制定真正的中国规则。
+ *但是，我们接受对手的自杀动作，所以我们
+ *应该遵守允许自杀的规则，只是不允许自杀。
+ *充分利用它们。*/
+//围棋规则
 enum go_ruleset {
 	RULES_CHINESE, /* default value */
 	RULES_AGA,
@@ -130,6 +148,10 @@ enum go_ruleset {
 	 * interpretation of them... These rules were
 	 * used e.g. at the EGC2012 13x13 tournament.
 	 * They are not supported by KGS. */
+    /*
+     简化的规则-规则-以残障者为点数和传球石的中文规则。也应该允许自杀，但帕奇永远不会自杀。*/
+    /*XXX：我在规则文本中找不到传递石头的要点，但这是罗伯特·贾西克对它们的解释……这些规则是在EGC201213x13锦标赛上使用的。KGS不支持它们。
+     */
 	RULES_SIMING,
 };
 
@@ -152,20 +174,20 @@ extern struct board_statics board_statics;
 
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
-
+/*您应该将此结构视为只读。如果要更改函数，请始终调用下面的函数。*/
 struct board {
-	int size; /* Including S_OFFBOARD margin - see below. */
-	int size2; /* size^2 */
-	int bits2; /* ceiling(log2(size2)) */
+	int size; /* Including S_OFFBOARD margin - see below. 棋盘的边长*/
+	int size2; /* size^2  开一个平方*/
+	int bits2; /* ceiling(log2(size2))表示用多杀个2进制为可以表示棋盘 */
 	int captures[S_MAX];
 	floating_t komi;
 	int handicap;
-	enum go_ruleset rules;
-	char *fbookfile;
+	enum go_ruleset rules;//规则
+	char *fbookfile;//棋谱
 	struct fbook *fbook;
 
 	int moves;
-	struct move last_move;
+	struct move last_move;//倒数第一步，倒数第二步
 	struct move last_move2; /* second-to-last move */
 FB_ONLY(struct move last_move3); /* just before last_move2, only set if last_move is pass */
 FB_ONLY(struct move last_move4); /* just before last_move3, only set if last_move & last_move2 are pass */
@@ -178,6 +200,7 @@ FB_ONLY(bool superko_violation);
 	 * S_OFFBOARD stones in order to speed up some internal loops.
 	 * Some of the foreach iterators below might include these points;
 	 * you need to handle them yourselves, if you need to. */
+    /*下面的两个结构是Goban映射，并由coord.pos索引。为了加速一些内部循环，该映射被来自s摼ofboard stone的一个点边缘包围。下面的一些foreach迭代器可能包括这些点；如果需要，您需要自己处理它们。*/
 
 	/* Stones played on the board */
 	enum stone b[BOARD_MAX_COORDS];
@@ -210,6 +233,7 @@ FB_ONLY(group_t c)[BOARD_MAX_GROUPS];  FB_ONLY(int clen);
 #endif
 
 	/* Symmetry information */
+    /*对称信息*/
 FB_ONLY(struct board_symmetry symmetry);
 
 	/* Last ko played on the board. */
@@ -217,6 +241,7 @@ FB_ONLY(struct move last_ko);
 FB_ONLY(int last_ko_age);
 
 	/* Basic ko check */
+    /*基本柯尔检验*/
 	struct move ko;
 
 #ifdef BOARD_UNDO_CHECKS
@@ -245,8 +270,10 @@ FB_ONLY(int last_ko_age);
 #define history_hash_next(i) ((i + 1) & history_hash_mask)
 FB_ONLY(hash_t history_hash)[1 << history_hash_bits];
 	/* Hash of current board position. */
+    /*当前板位置的哈希。*/
 FB_ONLY(hash_t hash);
 	/* Hash of current board position quadrants. */
+    /*当前板位置象限哈希*/
 FB_ONLY(hash_t qhash)[4];
 };
 

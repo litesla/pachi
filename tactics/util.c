@@ -39,6 +39,7 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 {
 	/* Queue for d+1 spots; no two spots of the same group
 	 * should appear in the queue. */
+    /*为D+1点排队；队列中不应出现同一组的两个点。*/
 #define qinc(x) (x = ((x + 1) >= board_size2(b) ? ((x) + 1 - board_size2(b)) : (x) + 1))
 	coord_t queue[board_size2(b)]; int qstart = 0, qstop = 0;
 
@@ -50,6 +51,7 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 	for (int d = 0; d <= maxdist; d++) {
 		/* Process queued moves, while setting the queue
 		 * for new wave. */
+        /*进程排队移动，同时为新的wave设置队列。*/
 		int qa = qstart, qb = qstop;
 		qstart = qstop;
 		for (int q = qa; q < qb; qinc(q)) {

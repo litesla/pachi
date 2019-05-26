@@ -24,12 +24,14 @@ struct playout_setup;
 typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
 
 /* Pick the next playout simulation move. */
+/*选择下一个播放模拟移动。*/
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct playout_setup *playout_setup, struct board *b, enum stone to_play);
 
 /* Set number of won (>0) or lost (<0) games for each considerable
  * move (usually a proportion of @games); can leave some untouched
  * if policy has no opinion. The number must have proper parity;
  * just use uct/prior.h:add_prior_value(). */
+/*为每一个相当大的移动设置赢的（>0）或输的（<0）游戏数（通常是@games的一部分）；如果政策没有意见，可以保持一些不变。数字必须具有适当的奇偶校验；只需使用uct/prior.h:add_prior_value（）。*/
 typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
 
 /* Whether to allow given move. All playout moves must pass permit()
@@ -46,6 +48,10 @@ struct playout_policy {
 	 * We call choose when we ask policy about next move.
 	 * We call assess when we ask policy about how good given move is.
 	 * We call permit when we ask policy if we can make a randomly chosen move. */
+    /*当我们开始新的游戏时，我们叫设置板。
+    *当我们询问有关下一步行动的政策时，我们会打电话给Choose。
+    *当我们问政策，给定的行动有多好时，我们会给评估打电话。
+    *当我们询问政策是否可以随机选择行动时，我们会通知许可证。*/
 	playoutp_setboard setboard;
 	playoutp_choose choose;
 	playoutp_assess assess;
@@ -63,20 +69,24 @@ struct playout_policy {
 
 
 /** Playout engine interface: */
-
+/*播放引擎接口：*/
 /* Engine hook for forcing moves before doing policy decision.
  * Return pass to forward to policy. */
+/*执行政策决策前，用于强制移动的引擎挂钩。将通行证返回到政策。*/
 typedef coord_t (*playouth_prepolicy)(struct playout_policy *playout_policy, struct playout_setup *setup, struct board *b, enum stone color);
 
 /* Engine hook for choosing moves in case policy did not choose
  * a move.
  * Return pass to forward to uniformly random selection. */
+/*用于在策略未选择移动时选择移动的引擎挂钩。返回“向前传递”到“均匀随机选择”。*/
 typedef coord_t (*playouth_postpolicy)(struct playout_policy *playout_policy, struct playout_setup *setup, struct board *b, enum stone color);
 
 struct playout_setup {
 	unsigned int gamelen; /* Maximal # of moves in playout. */
 	/* Minimal difference between captures to terminate the playout.
 	 * 0 means don't check. */
+    /*在比赛中最大限度的移动。*/
+/*捕获之间终止播放的最小差异。0表示不检查。*/
 	int mercymin;
 
 	void *hook_data; // for hook to reference its state

@@ -311,6 +311,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		.postpolicy_hook = uct_playout_postpolicy,
 		.hook_data = &upc,
 	};
+    //随机下棋的结果
 	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
 				      &u->ownermap, u->playout);
@@ -484,22 +485,24 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
     /*XXX：这有点乱，因为@n和下降[dlen-1]，节点是多余的。*/
-	struct uct_descent descent[DESCENT_DLEN];
+	struct uct_descent descent[DESCENT_DLEN];//512
 	descent[0].node = n; descent[0].lnode = NULL;
-	int dlen = 1;
+	int dlen = 1;//初始值为１
 	/* Total value of the sequence. */
     /*序列的总值*/
 	struct move_stats seq_value = { .playouts = 0 };
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */
-    /*沿下降的最后一个“重要”节点（即高于配置的播放次数的节点）。黑色和白色。*/
-	struct tree_node *significant[2] = { NULL, NULL };
-	if (n->u.playouts >= u->significant_threshold)
-		significant[node_color - 1] = n;
+    /*沿下降的最后一个“重要”节点（即展开次数高于配置的播放次数的节点）。黑色和白色。*/
+	struct tree_node *significant[2] = { NULL, NULL };//保存重要节点
+	if (n->u.playouts >= u->significant_threshold) //第一个是这个节点被玩的次数，有效阈值初始化为50
+		significant[node_color - 1] = n;//保存重要节点
 
 	int result;
+    //棋盘边界
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
+    //判断是否为第一个节点？？待解释
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	/* debug */
@@ -509,8 +512,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		fprintf(stderr, "--- (#%d) UCT walk with color %d\n", t->root->u.playouts, player_color);
 
     //下沉循环
+    //他不是叶子节点，　并且下沉过程走了两个ｐｓｓ，就没有必要下沉了
 	while (!tree_leaf_node(n) && passes < 2) {
-		spaces[dlen - 1] = ' '; spaces[dlen] = 0;
+		spaces[dlen - 1] = ' '; spaces[dlen] = 0;//用于调试
 
 
 		/*** Choose a node to descend to: */
@@ -520,10 +524,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * it is applied to children. */
         /*已经根据子颜色选择了奇偶校验，因为它应用于子颜色。*/
 		node_color = stone_other(node_color);
+        //奇偶性
 		int parity = (node_color == player_color ? 1 : -1);
 
 		assert(dlen < DESCENT_DLEN);
 		descent[dlen] = descent[dlen - 1];
+        //local_tree　bool　类型的　是一个本地参数设置
 		if (u->local_tree && (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d)) {
 			/* Start new local sequence. */
             /*启动新的本地序列。*/
@@ -532,10 +538,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
             /*记住，节点颜色已经保存了待找到子节点的颜色。*/
 			descent[dlen].lnode = node_color == S_BLACK ? t->ltree_black : t->ltree_white;
 		}
-
+        //字节写的随机数程序
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
+            //选择我们选择策略选出的下沉策略，下沉方式就是接单权值的计算方法，然后存储到ｄｅｓｃｅｎｔ数组中去
 			u->policy->descend(u->policy, t, &descent[dlen], parity, b2.moves > pass_limit);
 		else
+            //使用随机策略，而不是主策略
 			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, b2.moves > pass_limit);
 
 
@@ -594,7 +602,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * The size test must be before the test&set not after, to allow
 		 * expansion of the node later if enough nodes have been freed. */
         /*我们需要确保只有一个线程扩展节点。如果两个线程不幸在同一个节点上相遇，那么后一个线程只需从节点本身进行另一个模拟，没什么大不了的。在多线程情况下，节点的大小可能会超过最大值，但不会太大，所以可以。大小测试必须在测试之前进行，而不是在测试之后进行，以便在释放足够的节点后允许扩展节点。*/
-        /*当前节点是叶子节点，切没有被展开过，每个节点会有一个初始值，为了防止０值*/
+        /*当前节点是叶子节点，切没有被展开过，每个节点会有一个初始值，为了防止０值 virtual_loss = 1*/
 		if (tree_leaf_node(n)
 		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < u->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))

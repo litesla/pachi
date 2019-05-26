@@ -33,6 +33,8 @@
 /* Create a socket, bind to it on the given port and listen.
  * This function is restricted to server mode (port has
  * no hostname). Returns the socket. */
+/*创建一个套接字，在给定的端口上绑定到它并监听。此功能仅限于服务器模式（端口没有主机名）。返回套接字。*/
+
 int
 port_listen(char *port, int max_connections)
 {

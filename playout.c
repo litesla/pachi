@@ -62,14 +62,14 @@ permit_handler(struct board *b, struct move *m, void *data)
 	return playout_permit_move(policy, b, m, 1);
 }
 
-
+//随机落子
 coord_t
 play_random_move(struct playout_setup *setup,
 		 struct board *b, enum stone color,
 		 struct playout_policy *policy)
 {
 	coord_t coord = pass;
-	
+    //不同的随机方案
 	if (setup->prepolicy_hook) {
 		coord = setup->prepolicy_hook(policy, setup, b, color);
 		// fprintf(stderr, "prehook: %s\n", coord2sstr(coord, b));
@@ -85,13 +85,16 @@ play_random_move(struct playout_setup *setup,
 		coord = setup->postpolicy_hook(policy, setup, b, color);
 		// fprintf(stderr, "posthook: %s\n", coord2sstr(coord, b));
 	}
-
+    //对随机方案的判断
 	if (is_pass(coord)) {
 	play_random:
 		/* Defer to uniformly random move choice. */
 		/* This must never happen if the policy is tracking
 		 * internal board state, obviously. */
+        /*服从统一随机的移动选择。*/
+/*显然，如果策略正在跟踪内部板状态，则决不能发生这种情况。*/
 		assert(!policy->setboard || policy->setboard_randomok);
+        //在棋盘上落子，可以修改落子位置，并且判断是否可以
 		board_play_random(b, color, &coord, permit_handler, policy);
 
 	} else {
@@ -109,7 +112,8 @@ play_random_move(struct playout_setup *setup,
 
 	return coord;
 }
-
+//随机游戏策略
+//比如，setup的部分参数，policy也是引擎里的 都在引擎初始化的时候做出的
 int
 play_random_game(struct playout_setup *setup,
                  struct board *b, enum stone starting_color,
@@ -118,7 +122,7 @@ play_random_game(struct playout_setup *setup,
 		 struct playout_policy *policy)
 {
 	assert(setup && policy);
-
+    //
 	int gamelen = setup->gamelen - b->moves;
 
 	if (policy->setboard)
@@ -128,12 +132,13 @@ play_random_game(struct playout_setup *setup,
 	debug_level = policy->debug_level;
 #endif
 
-	enum stone color = starting_color;
+	enum stone color = starting_color;//出事颜色
 
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
-
+    //步数随机的长度
 	while (gamelen-- && passes < 2) {
 		coord_t coord = play_random_move(setup, b, color, policy);
+        //下面是一个围棋局面的判断处理
 
 #if 0
 		/* For UCT, superko test here is downright harmful since
@@ -181,7 +186,7 @@ play_random_game(struct playout_setup *setup,
 
 		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin)
 			break;
-
+        //颜色变换
 		color = stone_other(color);
 	}
 

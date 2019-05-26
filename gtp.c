@@ -296,7 +296,7 @@ cmd_play(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 
 	// This is where kgs starts the timer, not at genmove!
 	time_start_timer(&ti[stone_other(m.color)]);
-
+    //通知你是怎么玩的
 	if (engine->notify_play)
 		reply = engine->notify_play(engine, board, &m, enginearg);
 	if (board_play(board, &m) < 0) {

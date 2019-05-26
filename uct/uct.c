@@ -363,7 +363,7 @@ static void
 uct_done(struct engine *e)
 {
 	/* This is called on engine reset, especially when clear_board
-	 * is received and new game should begin. */
+	 * is received and new game should begin. 这是在引擎重置时调用的，特别是当收到清除板并开始新游戏时。*/
 	free(e->comment);
 
 	struct uct *u = e->data;
@@ -786,7 +786,7 @@ uct_state_init(char *arg, struct board *b)
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.95;
 	u->mercymin = 0;
-	u->significant_threshold = 50;
+	u->significant_threshold = 50;//５０
 	u->expand_p = 8;
 	u->dumpthres = 0.01;
 	u->playout_amaf = true;
@@ -1256,6 +1256,7 @@ uct_state_init(char *arg, struct board *b)
 
 			} else if (!strcasecmp(optname, "local_tree")) {
 				/* Whether to bias exploration by local tree values. */
+                /*是否偏袒本地树值的勘探。*/
 				u->local_tree = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "tenuki_d") && optval) {
 				/* Tenuki distance at which to break the local tree. */

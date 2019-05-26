@@ -436,6 +436,7 @@ get_binary_arg(struct slave_state *sstate, char *cmd, int cmd_size, int *bin_siz
  * Resend command history if the slave machine is out of sync.
  * Returns when the connection with the slave machine is cut.
  * slave_lock is held on both entry and exit of this function. */
+/*从线程的主循环。将当前命令发送到从属计算机并等待答复。如果从机不同步，则重新发送命令历史记录。当与从机的连接被切断时返回。从锁在该功能的入口和出口都保持不变。*/
 static void
 slave_loop(FILE *f, char *reply_buf, struct slave_state *sstate, bool resend)
 {
@@ -443,37 +444,44 @@ slave_loop(FILE *f, char *reply_buf, struct slave_state *sstate, bool resend)
 	int last_cmd_count = 0;
 	int last_reply_id = -1;
 	int reply_slot = -1;
+    /*这个是循环等待命令，也就是一直等着是否有命令*/
 	for (;;) {
 		if (resend) {
 			/* Resend complete or partial history */
+            /*重新发送完整或部分历史记录，处理失败的情况　断线回复功能*/
 			to_send = next_command(last_reply_id);
 		} else {
 			/* Wait for a new command. */
+            /*等待新命令。*/
 			while (last_cmd_count == cmd_count)
-				pthread_cond_wait(&cmd_cond, &slave_lock);
-			to_send = gtp_cmd;
+				pthread_cond_wait(&cmd_cond, &slave_lock);//条件等待，　产生一条命令就处理
+			to_send = gtp_cmd;//待发送的命令
 		}
 
 		/* Command available, send it to slave machine.
 		 * If slave was out of sync, send the history.
 		 * But first get binary arguments if necessary. */
+        /*命令可用，发送到从机。如果slave不同步，发送历史记录。但是如果需要，首先获取二进制参数。*/
 		int bin_size = 0;
 		void *bin_buf = get_binary_arg(sstate, gtp_cmd,
 					       gtp_cmds + CMDS_SIZE - gtp_cmd,
 					       &bin_size);
 		/* Check that the command is still valid. */
+        /*检查命令是否仍然有效。*/
 		resend = true;
 		if (!bin_buf) continue;
 
 		/* Send the command and get the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"
 		 * with id == cmd_id if it is in sync. */
+        /*发送命令并获得答复，该答复始终以\n \n从机发送“=id reply”或“”结尾。id reply“如果它是同步的，id==cmd_id。*/
 		last_cmd_count = cmd_count;
 		char buf[CMDS_SIZE];
+        //发送命令
 		int reply_id = send_command(to_send, bin_buf, &bin_size, f,
 					    sstate, buf);
 		if (reply_id == -1) return;
-
+        //获得回复
 		resend = process_reply(reply_id, buf, reply_buf, bin_buf, bin_size,
 				       &last_reply_id, &reply_slot, sstate);
 	}
@@ -504,6 +512,7 @@ is_pachi_slave(FILE *f, struct in_addr *client)
  * connection, to avoid wasting memory if max_slaves is too large.
  * We do not invalidate the received buffers if a slave disconnects;
  * they are still useful for other slaves. */
+/*线程将gtp命令发送到一个从机，并读取响应。如果一个从机死了，这个线程会等待另一个从机的连接。只有在我们第一次连接时才分配大的缓冲区，以避免在max_slaves太大时浪费内存。如果从机断开连接，我们不会使接收到的缓冲区失效；它们对其他从机仍然有用。*/
 static void * __attribute__((noreturn))
 slave_thread(void *arg)
 {
@@ -516,7 +525,9 @@ slave_thread(void *arg)
 
 	for (;;) {
 		/* Wait for a connection from any slave. */
+        /*等待任何从机的连接。*/
 		struct in_addr client;
+        //等待连接
 		int conn = open_server_connection(sstate.slave_sock, &client);
 
 		FILE *f = fdopen(conn, "r+");
@@ -529,9 +540,10 @@ slave_thread(void *arg)
 
 		if (!resend) slave_state_alloc(&sstate);
 		sstate.client = client;
-
+        //设置一个从机锁　配合条件等待锁的
 		pthread_mutex_lock(&slave_lock);
-		active_slaves++;
+		active_slaves++;//活动的从机数量加一
+        //一旦他和某个从机连接起来之后，的通讯
 		slave_loop(f, reply_buf, &sstate, resend);
 
 		assert(active_slaves > 0);
@@ -553,18 +565,21 @@ slave_thread(void *arg)
  * sent when the lock is released. The last command is overwritten
  * if gtp_cmd points to a non-empty string. cmd is a single word;
  * args has all arguments and is empty or has a trailing \n */
+/*为所有从系统创建一个新的gtp命令。从锁在进入和返回时保持不变，因此在释放锁时实际上会发送命令。如果gtp_cmd指向非空字符串，则最后一个命令将被覆盖。cmd是一个单字；args有所有参数，为空或有一个尾随的\n*/
 void
 update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 {
 	assert(gtp_cmd);
 	/* To make sure the slaves are in sync, we ignore the original id
 	 * and use the board number plus some random bits as gtp id. */
+    /*为了确保从机是同步的，我们忽略了原始ID，并使用板号加上一些随机位作为GTP ID.*/
 	static int gtp_id = -1;
 	int moves = is_reset(cmd) ? 0 : b->moves;//
 	if (new_id) {
 		int prev_id = gtp_id;
 		do {
 			/* fast_random() is 16-bit only so the multiplication can't overflow. */
+            /*fast_random（）只有16位，所以乘法不能溢出。*/
 			gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN); //获取熬一个新的gtp id，如果前后两个一样，在做一次，知道他俩不一样，为啥要随机，
 		} while (gtp_id == prev_id);//为啥要随机 fast_random返回的是一个随机数，游戏的最大长度，move 是步数
 		reply_count = 0;
@@ -574,6 +589,7 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 	cmd_count++;
 
 	/* Remember history for out-of-sync slaves. */
+    /*记住不同步从服务器的历史记录。*/
 	static int slot = 0;
 	static struct cmd_history *last = NULL;
 	if (new_id) {
@@ -584,6 +600,7 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 		last->next_cmd = NULL;
 	}
 	// Notify the slave threads about the new command.
+    //通知从线程有关新命令的信息。
 	pthread_cond_broadcast(&cmd_cond);//条件信号的广播
 }
 
@@ -592,28 +609,31 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
  * upon return, so the command will actually be sent when the
  * lock is released. cmd is a single word; args has all
  * arguments and is empty or has a trailing \n */
+/*更新命令历史记录，然后为所有从系统创建一个新的gtp命令。从锁在进入和返回时保持不变，因此在释放锁时实际上会发送命令。cmd是一个单字；args有所有参数，为空或有一个尾随的\n*/
 void
 new_cmd(struct board *b, char *cmd, char *args)
 {
 	// Clear the history when a new game starts:
 	if (!gtp_cmd || is_gamestart(cmd)) { //初始化命令
-		gtp_cmd = gtp_cmds;// 字符数组，gtp_cmds里面存储命令
+		gtp_cmd = gtp_cmds;// 字符数组，gtp_cmds里面存储命令　gtp_cmd是指向字符数组的首位
 		memset(history, 0, sizeof(history)); //历史命令的数组
 	} else {
 		/* Preserve command history for new slaves.
 		 * To indicate that the slave should only reply to
 		 * the last command we force the id of previous
 		 * commands to be just the move number. */
+        /*保留新奴隶的命令历史记录。为了指示从系统只应回复上一个命令，我们强制先前命令的ID仅为移动编号。*/
 		int id = prevent_reply(atoi(gtp_cmd));//
 		int len = strspn(gtp_cmd, "0123456789");
 		char buf[32];
-		snprintf(buf, sizeof(buf), "%0*d", len, id);//向字符数组中输出字符串，是命令的头部id
+		snprintf(buf, sizeof(buf), "%0*d", len, id);//向字符数组中输出字符串，len是输出的长度后面是输出的内容，是命令的头部id
 		memcpy(gtp_cmd, buf, len);
 
 		gtp_cmd += strlen(gtp_cmd);//让gtp指向最后
 	}
 
 	// Let the slave threads send the new gtp command:
+    //让从属线程发送新的gtp命令：
 	update_cmd(b, cmd, args, true);
 }
 
@@ -622,6 +642,7 @@ new_cmd(struct board *b, char *cmd, char *args)
  * given absolute time is passed.
  * The replies are returned in gtp_replies[0..reply_count-1]
  * slave_lock is held on entry and on return. */
+/*至少等待一个新答复。当至少Min_回复奴隶已经回复时返回，或者当给定的绝对时间过去时返回。回复在gtp_回复中返回[0..reply_count-1]奴隶锁在进入和返回时保持。*/
 void
 get_replies(double time_limit, int min_replies)
 {
@@ -664,14 +685,14 @@ protocol_init(char *slave_port, char *proxy_port, int max_slaves)
 
 	queue_max_length = max_slaves * MAX_GENMOVES_PER_SLAVE;
 	receive_queue = calloc2(queue_max_length, sizeof(*receive_queue));
-
+    //设置监听端口的套接字
 	default_sstate.slave_sock = port_listen(slave_port, max_slaves);
 	default_sstate.last_processed = -1;
 
 	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
 		default_sstate.b[n].queue_index = -1;
 	}
-
+    //开启线程，每个线程处理一个从机
 	pthread_t thread;
 	for (int id = 0; id < max_slaves; id++) {
 		pthread_create(&thread, NULL, slave_thread, (void *)(intptr_t)id);

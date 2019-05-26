@@ -161,7 +161,9 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	/* Commands that should not be sent to slaves.
 	 * time_left will be part of next pachi-genmoves,
 	 * we reduce latency by not forwarding it here. */
-	if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit) //等于这些命令直接返回ok
+    /*不应该发送到从系统的命令。离开的时间将是下一个pachi genmoves的一部分，我们不在这里转发它来减少延迟。*/
+	//当是这些命令的话，直接返回，　用原来的方式方法
+    if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit) //等于这些命令直接返回ok
 	    || !strcasecmp(cmd, "pachi-gentbook")
 	    || !strcasecmp(cmd, "pachi-dumptbook")
 	    || !strcasecmp(cmd, "kgs-chat")
@@ -173,10 +175,11 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	    || !strcasecmp(cmd, "final_score")
 	    || !strcasecmp(cmd, "final_status_list"))
 		return P_OK;
-
+    //协议同步锁，里面是获取从机锁　如果所有线程都运行到等待的状态，是解锁状态
 	protocol_lock();//没有这个命令的话执行到这里
 
 	// Create a new command to be sent by the slave threads.
+    //创建一个由从属线程发送的新命令。
 	new_cmd(b, cmd, args);
 
 	/* Wait for replies here. If we don't wait, we run the
@@ -458,7 +461,7 @@ distributed_state_init(char *arg, struct board *b)
 	struct distributed *dist = calloc2(1, sizeof(struct distributed));
 
 	dist->stats_hbits = DEFAULT_STATS_HBITS;
-	dist->max_slaves = DEFAULT_MAX_SLAVES;
+	dist->max_slaves = DEFAULT_MAX_SLAVES;//从机默认最大值
 	dist->shared_nodes = DEFAULT_SHARED_NODES;
 	if (arg) {
 		char *optspec, *next = arg;
@@ -476,10 +479,11 @@ distributed_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "proxy_port") && optval) {
 				dist->proxy_port = strdup(optval);
 			} else if (!strcasecmp(optname, "max_slaves") && optval) {
-				dist->max_slaves = atoi(optval);
+				dist->max_slaves = atoi(optval);//设置的从机值
 			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
 				/* Share at most shared_nodes between master and slave at each genmoves.
 				 * Must use the same value in master and slaves. */
+                /*在每个genmoves中，最多共享主节点和从节点。必须在主节点和从节点中使用相同的值。*/
 				dist->shared_nodes = atoi(optval);
 			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
                                 /* Set hash table size to 2^stats_hbits for the shared stats. */
@@ -498,11 +502,12 @@ distributed_state_init(char *arg, struct board *b)
 		die("distributed: missing slave_port\n");
 
 	merge_init(&default_sstate, dist->shared_nodes, dist->stats_hbits, dist->max_slaves);
-	protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves);
+	//分布式引擎的网络初始化引擎
+    protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves);
 
 	return dist;
 }
-
+//分布式引擎初始化
 struct engine *
 engine_distributed_init(char *arg, struct board *b)
 {

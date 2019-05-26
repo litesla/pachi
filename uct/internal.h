@@ -53,7 +53,7 @@ struct uct {
 	size_t max_pruned_size;
 	size_t pruning_threshold;
 	int mercymin;
-	int significant_threshold;
+	int significant_threshold;//有效阈值
 
 	int threads;
 	enum uct_thread_model {
@@ -105,8 +105,8 @@ struct uct {
 
 	char *banner;
 
-	struct uct_policy *policy;
-	struct uct_policy *random_policy;
+	struct uct_policy *policy;//规则
+	struct uct_policy *random_policy;//随机规则
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 	struct uct_pluginset *plugins;

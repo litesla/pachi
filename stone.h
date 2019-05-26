@@ -40,6 +40,7 @@ char2stone(char s)
 
 /* Curiously, gcc is reluctant to inline this; I have cofirmed
  * there is performance benefit. */
+/*奇怪的是，GCC不愿意直言这一点；我已经确认了性能优势*/
 static inline enum stone __attribute__((always_inline))
 stone_other(enum stone s)
 {

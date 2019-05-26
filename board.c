@@ -1447,7 +1447,7 @@ board_permit(struct board *b, struct move *m, void *data)
 		return false;
 	return true;
 }
-
+//尝试落子
 static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
 {
@@ -1460,10 +1460,10 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 		return false;
 	if (m.coord == *coord)
 		return likely(board_play_f(b, &m, f, NULL) >= 0);
-	*coord = m.coord; // permit modified the coordinate
+	*coord = m.coord; // permit modified the coordinate 允许修改坐标
 	return likely(board_play(b, &m) >= 0);
 }
-
+//在棋盘上落子
 void
 board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {

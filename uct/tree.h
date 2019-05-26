@@ -83,19 +83,19 @@ struct uct;
 *将所有节点分开会有很大的内存开销。*/
 struct tree_node {
 	hash_t hash;
-    //这一课树是一个二叉树 还有一个父节点指针 十字链表表示法，左孩子右兄弟
+    //这一课树是一个二叉树 还有一个父节点指针 十字链表表示法　兄弟节点，左孩子右兄弟
 	struct tree_node *parent, *sibling, *children;
 
 	/*** From here on, struct is saved/loaded from opening tbook */
 
-	struct move_stats u;
-	struct move_stats prior;
-	/* XXX: Should be way for policies to add their own stats */
+	struct move_stats u;//游戏次数
+	struct move_stats prior;//之前的
+	/* XXX: Should be way for policies to add their own stats 应该是策略添加其自身统计信息的方法*/
 	struct move_stats amaf;
-	/* Stats before starting playout; used for distributed engine. */
+	/* Stats before starting playout; used for distributed engine. 开始播放前的状态；用于分布式引擎。*/
 	struct move_stats pu;
 	/* Criticality information; information about final board owner
-	 * of the tree coordinate corresponding to the node */
+	 * of the tree coordinate corresponding to the node 关键性信息；与节点对应的树坐标的最终板所有者的信息*/
 	struct move_stats winner_owner; // owner == winner
 	struct move_stats black_owner; // owner == black
 
